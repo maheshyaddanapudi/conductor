@@ -57,7 +57,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     
     @Before
     public void setup() {
-    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
+    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.4.2"));
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
