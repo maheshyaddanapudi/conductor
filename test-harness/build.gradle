@@ -8,6 +8,7 @@ dependencies {
     testImplementation project(':conductor-contribs')
     testImplementation project(':conductor-redis-persistence')
     testImplementation project(':conductor-mysql-persistence')
+    testImplementation project(':conductor-mongo-persistence')
     testImplementation project(':conductor-postgres-persistence')
     testImplementation project(':conductor-cassandra-persistence')
     testImplementation project(':conductor-es6-persistence')
@@ -37,6 +38,7 @@ dependencies {
     testImplementation "org.testcontainers:elasticsearch:${revTestContainer}"
     testImplementation "org.testcontainers:mysql:${revTestContainer}"
     testImplementation "org.testcontainers:postgresql:${revTestContainer}"
+    testImplementation "org.testcontainers:mongodb:${revTestContainer}"
 }
 
 test {
