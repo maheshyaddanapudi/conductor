@@ -53,6 +53,17 @@ public class MongoTestConfiguration {
 	
 	private void starMongoContainer(MongoDBContainer mongoContainer) {
 		mongoContainer.start();
+		try {
+			mongoContainer.execInContainer("/bin/bash", "-c",
+                    "mongo --eval 'printjson(rs.initiate({_id:\"rs0\","
+                    + "members:[{_id:0,host:\"mongo:27017\"}]}))' "
+                    + "--quiet");
+			mongoContainer.execInContainer("/bin/bash", "-c",
+                    "until mongo --eval \"printjson(rs.isMaster())\" | grep ismaster | grep true > /dev/null 2>&1;"
+                    + "do sleep 1;done");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to initiate rs.", e);
+        }
 	}
 	
 	private void starGenericContainer(GenericContainer genericContainer) {
