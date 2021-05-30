@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.dao.QueueDAO;
-import com.netflix.conductor.mongo.config.MongoProperties;
 import com.netflix.conductor.mongo.entities.QueueDocument;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 import com.netflix.conductor.mongo.repositories.MongoQueueMessageRepository;
@@ -46,8 +45,8 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	@Autowired
 	MongoTemplate mongoTemplate;
 
-	public MongoQueueDAO(ObjectMapper objectMapper, MongoProperties properties) {
-		super(objectMapper, properties);
+	public MongoQueueDAO(ObjectMapper objectMapper) {
+		super(objectMapper);
 		
 		Executors.newSingleThreadScheduledExecutor()
         .scheduleAtFixedRate(this::processAllUnacks,

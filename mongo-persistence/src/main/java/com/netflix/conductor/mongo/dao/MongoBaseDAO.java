@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.metrics.Monitors;
-import com.netflix.conductor.mongo.config.MongoProperties;
 
 public abstract class MongoBaseDAO {
 
@@ -17,11 +16,9 @@ public abstract class MongoBaseDAO {
 	String DAO_NAME = "mongo";
 
     private final ObjectMapper objectMapper;
-    protected final MongoProperties properties;
 
-    public MongoBaseDAO(ObjectMapper objectMapper, MongoProperties properties) {
+    public MongoBaseDAO(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.properties = properties;
     }
     
     String toJson(Object value) {

@@ -32,7 +32,6 @@ import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.PollDataDAO;
 import com.netflix.conductor.dao.RateLimitingDAO;
 import com.netflix.conductor.metrics.Monitors;
-import com.netflix.conductor.mongo.config.MongoProperties;
 import com.netflix.conductor.mongo.entities.EventExecutionDocument;
 import com.netflix.conductor.mongo.entities.PollDataDocument;
 import com.netflix.conductor.mongo.entities.TaskDataDocument;
@@ -84,8 +83,8 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	@Autowired
 	MongoPollDataRepository mongoPollDataRepository;
 
-	public MongoExecutionDAO(ObjectMapper objectMapper, MongoProperties properties) {
-		super(objectMapper, properties);
+	public MongoExecutionDAO(ObjectMapper objectMapper) {
+		super(objectMapper);
 	}
 	
 	private static String dateStr(Long timeInMs) {

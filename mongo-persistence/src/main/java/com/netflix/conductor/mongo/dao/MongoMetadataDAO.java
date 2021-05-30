@@ -31,7 +31,6 @@ import com.netflix.conductor.core.exception.ApplicationException.Code;
 import com.netflix.conductor.dao.EventHandlerDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.metrics.Monitors;
-import com.netflix.conductor.mongo.config.MongoProperties;
 import com.netflix.conductor.mongo.entities.MetaEventHandlerDocument;
 import com.netflix.conductor.mongo.entities.MetaTaskDefDocument;
 import com.netflix.conductor.mongo.entities.MetaWorkflowDefDocument;
@@ -42,8 +41,8 @@ import com.netflix.conductor.mongo.repositories.MongoMetadataWorkflowRepository;
 @Trace
 public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, EventHandlerDAO {
 	
-	 public MongoMetadataDAO(ObjectMapper objectMapper, MongoProperties properties) {
-		super(objectMapper, properties);
+	 public MongoMetadataDAO(ObjectMapper objectMapper) {
+		super(objectMapper);
 	}
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MongoMetadataDAO.class);
