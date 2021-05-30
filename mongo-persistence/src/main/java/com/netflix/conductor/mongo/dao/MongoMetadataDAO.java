@@ -509,6 +509,37 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
         updateLatestVersion(def.getName(), maxVersion);
     }
     
+    public List<String> findAll() {
+    	return mongoTemplate.findDistinct("name", MetaWorkflowDefDocument.class, String.class);
+    }
+    
+    public List<WorkflowDef> getAllLatest() {
+    	List<WorkflowDef> result = new ArrayList<WorkflowDef>();
+    	
+        Query query = new Query();
+        query.addCriteria(Criteria.where("version").is("$latest_version"));
+    	
+        mongoTemplate.find(query, MetaWorkflowDefDocument.class).forEach(wdd -> {
+        	result.add(readValue(wdd.getJson_data(), WorkflowDef.class));
+        });;
+
+        return result;
+    }
+
+    public List<WorkflowDef> getAllVersions(String name) {
+    	List<WorkflowDef> result = new ArrayList<WorkflowDef>();
+    	
+        Query query = new Query();
+        query.addCriteria(Criteria.where("name").is(name));
+    	query.with(Sort.by(Direction.ASC, "version"));
+    	
+        mongoTemplate.find(query, MetaWorkflowDefDocument.class).forEach(wdd -> {
+        	result.add(readValue(wdd.getJson_data(), WorkflowDef.class));
+        });;
+
+        return result;
+    }
+    
     @VisibleForTesting
     String getWorkflowDefIndexValue(String name, int version) {
         return name + INDEX_DELIMITER + version;
