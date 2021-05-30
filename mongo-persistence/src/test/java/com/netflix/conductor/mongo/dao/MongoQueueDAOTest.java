@@ -18,7 +18,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,28 +33,20 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.testcontainers.containers.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
+import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
-import com.netflix.conductor.mongo.util.TestUtil;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
 public class MongoQueueDAOTest {
 
@@ -72,12 +63,14 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-    public MongoDBContainer mongoContainer;
+ //public MongoDBContainer mongoContainer;
+    
+    @Autowired
     public MongoTemplate mongoTemplate;
     
     @Before
     public void setup() {
-    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.4.2"));
+    	/*mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.4.2"));
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
@@ -85,8 +78,8 @@ public class MongoQueueDAOTest {
     	
     	mongoContainer.start();
     	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);
-    	this.mongoTemplate = testUtil.getMongoTemplate();
-        queueDAO = new MongoQueueDAO(testUtil.getObjectMapper(), testUtil.getMongoTemplate());
+    	this.mongoTemplate = testUtil.getMongoTemplate();*/
+        queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
     }
 
     @Test

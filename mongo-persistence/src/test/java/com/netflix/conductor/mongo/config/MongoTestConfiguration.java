@@ -15,16 +15,16 @@ import com.mongodb.client.MongoClients;
 @TestConfiguration
 public class MongoTestConfiguration {
 
-	/*@Bean("mongoContainer")
+	@SuppressWarnings("resource")
+	@Bean("mongoContainer")
 	public MongoDBContainer mongoContainer() {
 		
-    	
-    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
-    	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
-    	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
-    	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
 		
-		//starMongoContainer(mongoContainer);
+    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.0.8"))
+    	.withExposedPorts(27017)
+        .withCommand("--replSet rs0 --bind_ip localhost,M1");
+		
+		starMongoContainer(mongoContainer);
 		
 		return mongoContainer;
     
@@ -32,13 +32,13 @@ public class MongoTestConfiguration {
 	
 	private void starMongoContainer(MongoDBContainer mongoContainer) {
 		mongoContainer.start();
-	}*/
+	}
 	
-	/*@Bean
+	@Bean("mongoClient")
 	@DependsOn("mongoContainer")
     public MongoClient mongo() {
 		MongoDBContainer mongoContainer = mongoContainer();
-		String url = "mongodb://conductor:conductor@"+mongoContainer.getHost()+":"+mongoContainer.getMappedPort(27017)+"/conductor";
+		String url = "mongodb://"+mongoContainer.getContainerIpAddress()+":"+mongoContainer.getFirstMappedPort();
         ConnectionString connectionString = new ConnectionString(url);
         MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
           .applyConnectionString(connectionString)
@@ -47,8 +47,9 @@ public class MongoTestConfiguration {
     }
 
     @Bean
+    @DependsOn("mongoClient")
     public MongoTemplate mongoTemplate() throws Exception {
         return new MongoTemplate(mongo(), "conductor");
-    }*/
+    }
 	
 }

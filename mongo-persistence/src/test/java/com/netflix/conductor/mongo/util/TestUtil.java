@@ -25,7 +25,7 @@ public class TestUtil {
     	
     	mongoContainer.start();
     	
-		String url = "mongodb://conductor:conductor@"+mongoContainer.getHost()+":"+mongoContainer.getFirstMappedPort()+"/conductor";
+		String url = "mongodb://conductor:conductor@"+mongoContainer.getContainerIpAddress()+":"+mongoContainer.getFirstMappedPort()+"/conductor";
         ConnectionString connectionString = new ConnectionString(url);
         MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
           .applyConnectionString(connectionString)

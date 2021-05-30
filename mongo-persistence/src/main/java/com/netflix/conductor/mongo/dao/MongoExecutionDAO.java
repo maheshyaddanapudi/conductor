@@ -276,9 +276,9 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         try {
         	System.out.println("get Tasks taskIds --> "+taskIds.toString());
         	 if(!taskIds.isEmpty()) {
-        		 Criteria mainCriteria = Criteria.where("task_id").is(taskIds.get(0));
+        		 Criteria mainCriteria = new Criteria();
         		 
-        		 for(int taskCounter = 1; taskCounter<taskIds.size() ; taskCounter++) {
+        		 for(int taskCounter = 0; taskCounter<taskIds.size() ; taskCounter++) {
         			 mainCriteria.orOperator(Criteria.where("task_id").is(taskIds.get(taskCounter)));
         		 }
         		 
@@ -447,7 +447,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         List<Workflow> workflows = new LinkedList<>();
  
         Query searchQuery = new Query();
-        searchQuery.addCriteria(Criteria.where("").is(workflowName).and("date_str").gte(startTime).and("date_str").lte(endTime));
+        searchQuery.addCriteria(Criteria.where("workflow_def").is(workflowName).and("date_str").gte(startTime).and("date_str").lte(endTime));
 
         List<String> workflowIds = new ArrayList<String>();
         mongoTemplate.find(searchQuery, WorkflowDefToWorkflowDocument.class).forEach(wdtw -> workflowIds.add(wdtw.getWorkflow_id()));
@@ -477,11 +477,11 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		List<TaskInProgressDocument> inProgress = mongoTemplate.find(searchQuery, TaskInProgressDocument.class);
 		
 		if(!inProgress.isEmpty()) {
-			Criteria mainCriteria = Criteria.where("task_id").is(inProgress.get(0).getTask_id());
+			Criteria mainCriteria = new Criteria();
+   		 
+   		 	int total = inProgress.size();
 			
-			int total = inProgress.size();
-			
-			for(int counter = 1; counter < total ; counter++) {
+			for(int counter = 0; counter < total ; counter++) {
 				mainCriteria.orOperator(Criteria.where("task_id").is(inProgress.get(counter).getTask_id()));
 			}
 			
@@ -507,11 +507,11 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		
 		if(!inProgress.isEmpty()) {
 			
-			Criteria mainCriteria = Criteria.where("workflow_id").is(inProgress.get(0).getWorkflow_id()).and("correlation_id").is(correlationId);
+			Criteria mainCriteria = new Criteria();
 			
 			int total = inProgress.size();
 			
-			for(int counter = 1; counter < total ; counter++) {
+			for(int counter = 0; counter < total ; counter++) {
 				mainCriteria.orOperator(Criteria.where("workflow_id").is(inProgress.get(counter).getWorkflow_id()).and("correlation_id").is(correlationId));
 			}
 			
@@ -710,6 +710,9 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	 private void removeScheduledTask(Task task, String taskKey) {
 	        Query searchQuery= new Query();
 		 	searchQuery.addCriteria(Criteria.where("workflow_id").is(task.getWorkflowInstanceId()).and("task_key").is(taskKey));
+		 	
+		 	System.out.println("Remove Query -->"+searchQuery.toString());
+		 	
 	        mongoTemplate.remove(searchQuery, TaskScheduledDocument.class);
 	    }
 	 
@@ -853,6 +856,13 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
        Query searchQuery = new Query();
        searchQuery.addCriteria(Criteria.where("event_handler_name").is(eventHandlerName).and("event_name").is(eventName).and("message_id").is(messageId).and("execution_id").is(executionId));
 
+       /*Criteria criteria = new Criteria();
+       criteria
+       .andOperator(Criteria.where("event_handler_name").is(eventHandlerName).and("event_name").is(eventName).and("message_id").is(messageId).and("execution_id").is(executionId));
+       
+       Query searchQuery = new Query();
+       searchQuery.addCriteria(criteria);*/
+       
        EventExecutionDocument eventExecutionDocument = mongoTemplate.findOne(searchQuery, EventExecutionDocument.class);
        return null!=eventExecutionDocument ? readValue(eventExecutionDocument.getJson_data(), EventExecution.class) : null;
    }

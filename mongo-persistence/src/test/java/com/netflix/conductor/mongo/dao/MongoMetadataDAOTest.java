@@ -49,9 +49,10 @@ import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
+import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.util.TestUtil;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
 public class MongoMetadataDAOTest {
 
@@ -66,12 +67,14 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    public MongoDBContainer mongoContainer;
+    //public MongoDBContainer mongoContainer;
+    
+    @Autowired
     public MongoTemplate mongoTemplate;
     
     @Before
     public void setup() {
-    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.4.2"));
+    	/*mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.4.2"));
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
@@ -79,7 +82,8 @@ public class MongoMetadataDAOTest {
     	
     	mongoContainer.start();
     	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);
-    	metadataDAO = new MongoMetadataDAO(objectMapper, testUtil.getMongoTemplate());
+    	this.mongoTemplate = testUtil.getMongoTemplate();*/
+    	metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
     }
 
     @Test
