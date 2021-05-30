@@ -36,7 +36,7 @@ public class MongoTestConfiguration {
     			.withNetworkAliases("mongo")
     			.withStartupTimeout(Duration.ofSeconds(900))
     			.withExposedPorts(27017)
-    			.withCommand("--replSet rs0 --bind_ip localhost,mongo")
+    			//.withCommand("--replSet rs0 --bind_ip localhost,mongo")
     			.withEnv(envMap);
 		
 		starMongoContainer(mongoContainer);
@@ -53,7 +53,7 @@ public class MongoTestConfiguration {
 	
 	private void starMongoContainer(MongoDBContainer mongoContainer) {
 		mongoContainer.start();
-		try {
+		/*try {
 			mongoContainer.execInContainer("/bin/bash", "-c",
                     "mongo --eval 'printjson(rs.initiate({_id:\"rs0\","
                     + "members:[{_id:0,host:\"mongo:27017\"}]}))' "
@@ -63,7 +63,7 @@ public class MongoTestConfiguration {
                     + "do sleep 1;done");
         } catch (Exception e) {
             throw new IllegalStateException("Failed to initiate rs.", e);
-        }
+        }*/
 	}
 	
 	private void starGenericContainer(GenericContainer genericContainer) {
