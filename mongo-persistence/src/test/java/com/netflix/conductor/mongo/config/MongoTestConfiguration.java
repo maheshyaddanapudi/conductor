@@ -8,7 +8,9 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.utility.DockerImageName;
 
 import com.mongodb.ConnectionString;
@@ -30,12 +32,20 @@ public class MongoTestConfiguration {
 		envMap.put("MONGO_INITDB_DATABASE", "conductor");
 		
     	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.0.8"))
+    			.withNetwork(Network.newNetwork())
+    			.withNetworkAliases("mongo")
     			.withStartupTimeout(Duration.ofSeconds(900))
     			.withExposedPorts(27017)
-    			.withCommand("--replSet rs0 --bind_ip localhost")
+    			.withCommand("--replSet rs0 --bind_ip localhost,mongo")
     			.withEnv(envMap);
 		
 		starMongoContainer(mongoContainer);
+		
+		/*GenericContainer genericContainer = new GenericContainer("mongo:4.0.8")
+                .withExposedPorts(27017)
+                .withCommand("--replSet rs0 --bind_ip localhost,M1");
+		
+		starGenericContainer(genericContainer);*/
 		
 		return mongoContainer;
     
@@ -45,16 +55,16 @@ public class MongoTestConfiguration {
 		mongoContainer.start();
 	}
 	
+	private void starGenericContainer(GenericContainer genericContainer) {
+		genericContainer.start();
+	}
+	
 	@Bean("mongoClient")
 	@DependsOn("mongoContainer")
     public MongoClient mongo() {
 		MongoDBContainer mongoContainer = mongoContainer();
-		String url = "mongodb://conductor:conductor@"+mongoContainer.getHost()+":"+mongoContainer.getFirstMappedPort()+"/?authSource=admin";
-        ConnectionString connectionString = new ConnectionString(url);
-        MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
-          .applyConnectionString(connectionString)
-          .build();
-        return MongoClients.create(mongoClientSettings);
+		String url = "mongodb://conductor:conductor@"+mongoContainer.getContainerIpAddress()+":"+mongoContainer.getFirstMappedPort()+"/?authSource=admin";
+        return MongoClients.create(url);
     }
 
     @Bean
