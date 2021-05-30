@@ -34,8 +34,6 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -46,15 +44,12 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 import com.netflix.conductor.mongo.util.TestUtil;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 public class MongoQueueDAOTest {
 
@@ -63,7 +58,7 @@ public class MongoQueueDAOTest {
     private MongoQueueDAO queueDAO;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    public ObjectMapper objectMapper;
 
     @Rule
     public TestName name = new TestName();
@@ -83,12 +78,11 @@ public class MongoQueueDAOTest {
     	
     	mongoContainer.start();
     	
-    	mongoTemplate = new MongoTemplate(MongoClients.create(mongoContainer.getReplicaSetUrl()), "test");
-    	
     	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);
-    	this.mongoTemplate = testUtil.getMongoTemplate();
+    	
+    	mongoTemplate = testUtil.getMongoTemplate();
         
-    	queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
+    	queueDAO = new MongoQueueDAO(testUtil.getObjectMapper(), mongoTemplate);
     }
 
     @Test

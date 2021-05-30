@@ -49,17 +49,16 @@ import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.util.TestUtil;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    public ObjectMapper objectMapper;
 
     @Rule
     public TestName name = new TestName();
@@ -67,23 +66,21 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    //public MongoDBContainer mongoContainer;
+    public MongoDBContainer mongoContainer;
     
-    @Autowired
     public MongoTemplate mongoTemplate;
     
-    @Before
+    @SuppressWarnings("resource")
+	@Before
     public void setup() {
-    	/*mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.4.2"));
-    	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
-    	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
-    	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
-    	mongoContainer.withStartupTimeout(Duration.ofSeconds(900));
+    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8"))
+    	.withStartupTimeout(Duration.ofSeconds(900));
     	
     	mongoContainer.start();
+    	
     	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);
-    	this.mongoTemplate = testUtil.getMongoTemplate();*/
-    	metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
+    	
+    	metadataDAO = new MongoMetadataDAO(testUtil.getObjectMapper(), testUtil.getMongoTemplate());
     }
 
     @Test

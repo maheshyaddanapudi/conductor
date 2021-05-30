@@ -18,20 +18,7 @@ public class TestUtil {
 
         this.objectMapper = objectMapper;
 
-        mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
-    	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
-    	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
-    	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
-    	
-    	mongoContainer.start();
-    	
-		String url = "mongodb://conductor:conductor@"+mongoContainer.getContainerIpAddress()+":"+mongoContainer.getFirstMappedPort()+"/conductor";
-        ConnectionString connectionString = new ConnectionString(url);
-        MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
-          .applyConnectionString(connectionString)
-          .build();
-        
-        this.mongoTemplate = new MongoTemplate(MongoClients.create(mongoClientSettings), "conductor");
+        this.mongoTemplate = new MongoTemplate(MongoClients.create(mongoContainer.getReplicaSetUrl()), "test");
     }
     
     public MongoTemplate getMongoTemplate() {
