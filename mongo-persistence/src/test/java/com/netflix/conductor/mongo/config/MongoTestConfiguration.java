@@ -31,13 +31,13 @@ public class MongoTestConfiguration {
 		envMap.put("MONGO_INITDB_ROOT_PASSWORD", "conductor");
 		envMap.put("MONGO_INITDB_DATABASE", "conductor");
 		
-    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8"))
-    			.withNetwork(Network.newNetwork())
+    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8"));
+    			/*.withNetwork(Network.newNetwork())
     			.withNetworkAliases("mongo")
     			.withStartupTimeout(Duration.ofSeconds(900))
     			.withExposedPorts(27017)
-    			//.withCommand("--replSet rs0 --bind_ip localhost,mongo")
-    			.withEnv(envMap);
+    			.withCommand("--replSet rs0 --bind_ip localhost,mongo")
+    			.withEnv(envMap);*/
 		
 		starMongoContainer(mongoContainer);
 		
