@@ -15,7 +15,7 @@ import com.mongodb.client.MongoClients;
 @TestConfiguration
 public class MongoTestConfiguration {
 
-	@Bean("mongoContainer")
+	/*@Bean("mongoContainer")
 	public MongoDBContainer mongoContainer() {
 		
     	
@@ -32,7 +32,7 @@ public class MongoTestConfiguration {
 	
 	private void starMongoContainer(MongoDBContainer mongoContainer) {
 		mongoContainer.start();
-	}
+	}*/
 	
 	/*@Bean
 	@DependsOn("mongoContainer")

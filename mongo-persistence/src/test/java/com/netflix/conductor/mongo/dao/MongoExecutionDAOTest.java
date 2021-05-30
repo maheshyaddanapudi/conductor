@@ -15,6 +15,7 @@ package com.netflix.conductor.mongo.dao;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.Before;
@@ -60,6 +61,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
+    	mongoContainer.withStartupTimeout(Duration.ofSeconds(900));
     	
     	mongoContainer.start();
     	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);

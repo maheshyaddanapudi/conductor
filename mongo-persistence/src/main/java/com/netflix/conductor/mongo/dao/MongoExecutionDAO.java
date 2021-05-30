@@ -274,6 +274,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		List<Task> result = new ArrayList<Task>();
         
         try {
+        	System.out.println("get Tasks taskIds --> "+taskIds.toString());
         	 if(!taskIds.isEmpty()) {
         		 Criteria mainCriteria = Criteria.where("task_id").is(taskIds.get(0));
         		 
@@ -282,7 +283,14 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         		 }
         		 
         		 searchQuery.addCriteria(mainCriteria);
+        		 
+        		 
+        		 System.out.println("get Tasks searchQuery --> "+searchQuery.toString());
+        		 
              	 List<TaskDataDocument> taskDataList = mongoTemplate.find(searchQuery, TaskDataDocument.class);
+             	 
+             	 System.out.println("taskDataList --> "+taskDataList.isEmpty()+" "+taskDataList.size()+ " "+taskDataList.toString());
+             	 
                  if(taskDataList.isEmpty())
                  	return result;
                  else
@@ -298,7 +306,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
             	result.add(getTask(taskId));
             });
         }
-        
+        System.out.println("result--> "+result.toString());
         return result;
 	}
 
@@ -312,9 +320,9 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		
 		List<String> taskIds = new ArrayList<String>();
 		
-		
+		System.out.println("searchQuery --> "+searchQuery.toString());
 		mongoTemplate.find(searchQuery, WorkflowToTaskDocument.class).forEach(wttd -> taskIds.add(wttd.getTask_id()));
-        
+        System.out.println("taskIds --> "+taskIds.toString());
 		return getTasks(taskIds);
     }
 	

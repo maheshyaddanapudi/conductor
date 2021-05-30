@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +75,7 @@ public class MongoMetadataDAOTest {
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
+    	mongoContainer.withStartupTimeout(Duration.ofSeconds(900));
     	
     	mongoContainer.start();
     	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);
