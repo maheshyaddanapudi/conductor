@@ -24,7 +24,7 @@ public class MongoTestConfiguration {
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
 		
-		starMongoContainer(mongoContainer);
+		//starMongoContainer(mongoContainer);
 		
 		return mongoContainer;
     
@@ -34,7 +34,7 @@ public class MongoTestConfiguration {
 		mongoContainer.start();
 	}
 	
-	@Bean
+	/*@Bean
 	@DependsOn("mongoContainer")
     public MongoClient mongo() {
 		MongoDBContainer mongoContainer = mongoContainer();
@@ -49,6 +49,6 @@ public class MongoTestConfiguration {
     @Bean
     public MongoTemplate mongoTemplate() throws Exception {
         return new MongoTemplate(mongo(), "conductor");
-    }
+    }*/
 	
 }

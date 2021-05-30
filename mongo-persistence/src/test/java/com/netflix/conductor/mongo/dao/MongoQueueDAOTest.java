@@ -33,20 +33,27 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 public class MongoQueueDAOTest {
 
@@ -63,8 +70,31 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-    @Autowired
-    public MongoTemplate mongoTemplate;
+public MongoDBContainer mongoContainer;
+    
+    @Bean
+	@DependsOn("mongoContainer")
+    public MongoClient mongo() {
+    	
+    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
+    	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
+    	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
+    	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
+    	
+    	mongoContainer.start();
+		String url = "mongodb://conductor:conductor@"+mongoContainer.getHost()+":"+mongoContainer.getMappedPort(27017)+"/conductor";
+        ConnectionString connectionString = new ConnectionString(url);
+        MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
+          .applyConnectionString(connectionString)
+          .build();
+        
+        return MongoClients.create(mongoClientSettings);
+    }
+
+    @Bean
+    public MongoTemplate mongoTemplate() throws Exception {
+        return new MongoTemplate(mongo(), "conductor");
+    }
 
     @Before
     public void setup() {

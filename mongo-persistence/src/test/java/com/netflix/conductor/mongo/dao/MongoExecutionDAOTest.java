@@ -24,19 +24,26 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.ExecutionDAOTest;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
@@ -51,9 +58,32 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
     
-    @Autowired
-    MongoTemplate mongoTemplate;
+    public MongoDBContainer mongoContainer;
+    
+    @Bean
+	@DependsOn("mongoContainer")
+    public MongoClient mongo() {
+    	
+    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
+    	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
+    	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
+    	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
+    	
+    	mongoContainer.start();
+		String url = "mongodb://conductor:conductor@"+mongoContainer.getHost()+":"+mongoContainer.getMappedPort(27017)+"/conductor";
+        ConnectionString connectionString = new ConnectionString(url);
+        MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
+          .applyConnectionString(connectionString)
+          .build();
+        
+        return MongoClients.create(mongoClientSettings);
+    }
 
+    @Bean
+    public MongoTemplate mongoTemplate() throws Exception {
+        return new MongoTemplate(mongo(), "conductor");
+    }
+    
     @Before
     public void setup() {
         executionDAO = new MongoExecutionDAO(objectMapper);
