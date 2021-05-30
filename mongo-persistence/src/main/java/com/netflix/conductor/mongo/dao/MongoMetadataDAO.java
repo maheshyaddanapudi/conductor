@@ -41,9 +41,9 @@ import com.netflix.conductor.mongo.repositories.MongoMetadataWorkflowRepository;
 @Trace
 public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, EventHandlerDAO {
 	
-	 public MongoMetadataDAO(ObjectMapper objectMapper) {
-		super(objectMapper);
-	}
+	 public MongoMetadataDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
+			super(objectMapper, mongoTemplate);
+		}
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MongoMetadataDAO.class);
     private static final String CLASS_NAME = MongoMetadataDAO.class.getSimpleName();
@@ -60,8 +60,6 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
     @Autowired
     MongoMetaEventHandlerRepository mongoMetaEventHandlerRepository;
     
-    @Autowired
-    MongoTemplate mongoTemplate;
 
 	@Override
 	public void createTaskDef(TaskDef taskDef) {

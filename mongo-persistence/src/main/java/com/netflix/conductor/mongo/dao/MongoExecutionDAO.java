@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.netflix.conductor.annotations.Trace;
 import com.netflix.conductor.common.metadata.events.EventExecution;
 import com.netflix.conductor.common.metadata.tasks.PollData;
 import com.netflix.conductor.common.metadata.tasks.Task;
@@ -43,7 +44,6 @@ import com.netflix.conductor.mongo.entities.WorkflowPendingDocument;
 import com.netflix.conductor.mongo.entities.WorkflowToTaskDocument;
 import com.netflix.conductor.mongo.repositories.MongoEventExecutionRepository;
 import com.netflix.conductor.mongo.repositories.MongoPollDataRepository;
-import com.netflix.conductor.mongo.repositories.MongoTaskDataRepository;
 import com.netflix.conductor.mongo.repositories.MongoTaskInProgressRepository;
 import com.netflix.conductor.mongo.repositories.MongoTaskScheduledRepository;
 import com.netflix.conductor.mongo.repositories.MongoWorkflowDefToWorkflowRepository;
@@ -51,16 +51,11 @@ import com.netflix.conductor.mongo.repositories.MongoWorkflowPendingRepository;
 import com.netflix.conductor.mongo.repositories.MongoWorkflowRepository;
 import com.netflix.conductor.mongo.repositories.MongoWorkflowToTaskRepository;
 
+@Trace
 public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, RateLimitingDAO, PollDataDAO {
 	
 	@Autowired
-	MongoTemplate mongoTemplate; 
-	
-	@Autowired
 	MongoTaskScheduledRepository mongoTaskScheduledRepository;
-	
-	@Autowired
-	MongoTaskDataRepository mongoTaskDataRepository;
 	
 	@Autowired
 	MongoWorkflowToTaskRepository mongoWorkflowToTaskRepository;
@@ -83,8 +78,8 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	@Autowired
 	MongoPollDataRepository mongoPollDataRepository;
 
-	public MongoExecutionDAO(ObjectMapper objectMapper) {
-		super(objectMapper);
+	public MongoExecutionDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
+		super(objectMapper, mongoTemplate);
 	}
 	
 	private static String dateStr(Long timeInMs) {

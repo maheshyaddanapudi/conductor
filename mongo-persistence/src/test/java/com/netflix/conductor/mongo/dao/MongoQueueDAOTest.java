@@ -52,6 +52,7 @@ import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
+import com.netflix.conductor.mongo.util.TestUtil;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
@@ -70,35 +71,20 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-public MongoDBContainer mongoContainer;
+    public MongoDBContainer mongoContainer;
+    public MongoTemplate mongoTemplate;
     
-    @Bean
-	@DependsOn("mongoContainer")
-    public MongoClient mongo() {
-    	
+    @Before
+    public void setup() {
     	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_USERNAME", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_ROOT_PASSWORD", "conductor");
     	mongoContainer.addEnv("MONGO_INITDB_DATABASE", "conductor");
     	
     	mongoContainer.start();
-		String url = "mongodb://conductor:conductor@"+mongoContainer.getHost()+":"+mongoContainer.getMappedPort(27017)+"/conductor";
-        ConnectionString connectionString = new ConnectionString(url);
-        MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
-          .applyConnectionString(connectionString)
-          .build();
-        
-        return MongoClients.create(mongoClientSettings);
-    }
-
-    @Bean
-    public MongoTemplate mongoTemplate() throws Exception {
-        return new MongoTemplate(mongo(), "conductor");
-    }
-
-    @Before
-    public void setup() {
-        queueDAO = new MongoQueueDAO(objectMapper);
+    	TestUtil testUtil = new TestUtil(mongoContainer, objectMapper);
+    	this.mongoTemplate = testUtil.getMongoTemplate();
+        queueDAO = new MongoQueueDAO(testUtil.getObjectMapper(), testUtil.getMongoTemplate());
     }
 
     @Test
@@ -223,7 +209,7 @@ public MongoDBContainer mongoContainer;
         		.and("popped").is(false));
         
         try {
-        	long count = mongoTemplate.count(searchQuery, QueueMessageDocument.class);
+        	long count = this.mongoTemplate.count(searchQuery, QueueMessageDocument.class);
             assertEquals("Remaining queue size mismatch", expectedSize, count);
         } catch (Exception ex) {
             fail(ex.getMessage());
@@ -333,7 +319,7 @@ public MongoDBContainer mongoContainer;
         		.and("popped").is(false));
         
         try {
-        	long count = mongoTemplate.count(searchQuery, QueueMessageDocument.class);
+        	long count = this.mongoTemplate.count(searchQuery, QueueMessageDocument.class);
             assertEquals("Remaining queue size mismatch", expectedSize, count);
         } catch (Exception ex) {
             fail(ex.getMessage());

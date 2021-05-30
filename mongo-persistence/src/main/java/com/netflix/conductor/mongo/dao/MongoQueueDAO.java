@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.netflix.conductor.annotations.Trace;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.mongo.entities.QueueDocument;
@@ -32,6 +33,7 @@ import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 import com.netflix.conductor.mongo.repositories.MongoQueueMessageRepository;
 import com.netflix.conductor.mongo.repositories.MongoQueueRepository;
 
+@Trace
 public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	
 	private static final Long UNACK_SCHEDULE_MS = 60_000L;
@@ -42,11 +44,9 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	@Autowired
 	MongoQueueMessageRepository mongoQueueMessageRepository;
 	
-	@Autowired
-	MongoTemplate mongoTemplate;
-
-	public MongoQueueDAO(ObjectMapper objectMapper) {
-		super(objectMapper);
+	
+	public MongoQueueDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
+		super(objectMapper, mongoTemplate);
 		
 		Executors.newSingleThreadScheduledExecutor()
         .scheduleAtFixedRate(this::processAllUnacks,

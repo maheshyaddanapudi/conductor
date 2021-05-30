@@ -46,8 +46,7 @@ services:
       timeout: 10s
       retries: 5
     ports:
-      - 1521:1521
-      - 5500:5500
+      - 27017:27017
     networks:
       - internal
     logging:

@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.core.MongoTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,9 +17,11 @@ public abstract class MongoBaseDAO {
 	String DAO_NAME = "mongo";
 
     private final ObjectMapper objectMapper;
+    protected final MongoTemplate mongoTemplate;
 
-    public MongoBaseDAO(ObjectMapper objectMapper) {
+    public MongoBaseDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
         this.objectMapper = objectMapper;
+        this.mongoTemplate = mongoTemplate;
     }
     
     String toJson(Object value) {
