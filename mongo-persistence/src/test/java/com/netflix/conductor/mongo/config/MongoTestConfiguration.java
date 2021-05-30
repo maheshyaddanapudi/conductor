@@ -31,7 +31,7 @@ public class MongoTestConfiguration {
 		envMap.put("MONGO_INITDB_ROOT_PASSWORD", "conductor");
 		envMap.put("MONGO_INITDB_DATABASE", "conductor");
 		
-    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8"));
+    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8")).withEnv(envMap);
     			/*.withNetwork(Network.newNetwork())
     			.withNetworkAliases("mongo")
     			.withStartupTimeout(Duration.ofSeconds(900))
@@ -75,7 +75,8 @@ public class MongoTestConfiguration {
     public MongoClient mongo() {
 		MongoDBContainer mongoContainer = mongoContainer();
 		String url = "mongodb://conductor:conductor@"+mongoContainer.getContainerIpAddress()+":"+mongoContainer.getFirstMappedPort()+"/?authSource=admin";
-        return MongoClients.create(mongoContainer.getReplicaSetUrl("conductor"));
+        //return MongoClients.create(mongoContainer.getReplicaSetUrl("conductor"));
+		return MongoClients.create(url);
     }
 
     @Bean
