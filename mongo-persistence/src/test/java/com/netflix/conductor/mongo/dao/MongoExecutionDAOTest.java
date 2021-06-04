@@ -16,7 +16,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -61,7 +63,13 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @SuppressWarnings("resource")
 	@Before
     public void setup() {
-    	mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8"))
+    	Map<String, String> envMap = new HashMap<String,String>();
+		
+		envMap.put("MONGO_INITDB_ROOT_USERNAME", "conductor");
+		envMap.put("MONGO_INITDB_ROOT_PASSWORD", "conductor");
+		envMap.put("MONGO_INITDB_DATABASE", "conductor");
+		
+    	MongoDBContainer mongoContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.2.8")).withEnv(envMap)
     	.withStartupTimeout(Duration.ofSeconds(900));
     	
     	mongoContainer.start();
