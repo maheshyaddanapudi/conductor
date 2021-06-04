@@ -18,7 +18,7 @@ public class TestUtil {
 
         this.objectMapper = objectMapper;
 
-        this.mongoTemplate = new MongoTemplate(MongoClients.create(mongoContainer.getReplicaSetUrl()), "test");
+        this.mongoTemplate = new MongoTemplate(MongoClients.create("mongodb://conductor:conductor@"+mongoContainer.getContainerIpAddress()+":"+mongoContainer.getFirstMappedPort()+"/?authSource=admin"), "conductor");
     }
     
     public MongoTemplate getMongoTemplate() {
