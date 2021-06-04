@@ -44,6 +44,7 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.testcontainers.containers.MongoDBContainer;
@@ -59,7 +60,8 @@ import com.netflix.conductor.core.exception.ApplicationException;
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@Import({MongoDataAutoConfiguration.class, MongoRepositoriesAutoConfiguration.class, MongoAutoConfiguration.class})
+@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
+@Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;
