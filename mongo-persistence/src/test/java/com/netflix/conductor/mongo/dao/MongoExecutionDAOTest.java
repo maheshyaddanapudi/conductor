@@ -56,7 +56,6 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
     
-    @Autowired
     public MongoTemplate mongoTemplate;
     
     @ClassRule 

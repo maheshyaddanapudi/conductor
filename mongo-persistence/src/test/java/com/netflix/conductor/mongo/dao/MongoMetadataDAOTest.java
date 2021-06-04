@@ -68,7 +68,6 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    @Autowired
     public MongoTemplate mongoTemplate;
     
     @ClassRule 
