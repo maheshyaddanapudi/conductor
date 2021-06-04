@@ -18,12 +18,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,23 +36,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.util.TestPropertyValues;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
-import com.netflix.conductor.mongo.config.MongoDbContainer;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class}, initializers = MongoQueueDAOTest.MongoDbInitializer.class)
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MongoQueueDAOTest {
@@ -68,33 +68,23 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-    @Autowired
+    
     public MongoTemplate mongoTemplate;
     
-    private static MongoDbContainer mongoDbContainer;
+    @ClassRule 
+    public static MongoDBContainer mongoDbContainer = new MongoDBContainer("mongo:3.2.4")
+    		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
 
     @BeforeAll
     public void setup() {
     	
-    	 mongoDbContainer = new MongoDbContainer();
-         mongoDbContainer.start();
-    	
+    	 mongoDbContainer.start();
+    	 mongoTemplate = new MongoTemplate(MongoClients.create(mongoDbContainer.getReplicaSetUrl()), "test");
+    	 
          queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
+         
     }
-    
-    public static class MongoDbInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-        @Override
-        public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
-            
-            TestPropertyValues values = TestPropertyValues.of(
-                    "spring.data.mongodb.host=" + mongoDbContainer.getContainerIpAddress(),
-                    "spring.data.mongodb.port=" + mongoDbContainer.getPort()
-
-            );
-            values.applyTo(configurableApplicationContext);
-        }
-    }
-        
+   
     @Test
     public void complexQueueTest() {
         String queueName = "TestQueue";

@@ -15,8 +15,10 @@ package com.netflix.conductor.mongo.dao;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.time.Duration;
 import java.util.List;
 
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.jupiter.api.BeforeAll;
@@ -25,22 +27,20 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.util.TestPropertyValues;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.ExecutionDAOTest;
-import com.netflix.conductor.mongo.config.MongoDbContainer;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class}, initializers = MongoExecutionDAOTest.MongoDbInitializer.class)
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
@@ -59,30 +59,18 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Autowired
     public MongoTemplate mongoTemplate;
     
-    private static MongoDbContainer mongoDbContainer;
+    @ClassRule 
+    public static MongoDBContainer mongoDbContainer = new MongoDBContainer("mongo:4.2.8")
+    		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
 
     @BeforeAll
     public void setup() {
     	
-    	 mongoDbContainer = new MongoDbContainer();
-         mongoDbContainer.start();
-    	
+    	mongoDbContainer.start();
+    	mongoTemplate = new MongoTemplate(MongoClients.create(mongoDbContainer.getReplicaSetUrl()), "test");
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
     
-    public static class MongoDbInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-        @Override
-        public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
-            
-            TestPropertyValues values = TestPropertyValues.of(
-                    "spring.data.mongodb.host=" + mongoDbContainer.getContainerIpAddress(),
-                    "spring.data.mongodb.port=" + mongoDbContainer.getPort()
-
-            );
-            values.applyTo(configurableApplicationContext);
-        }
-    }
-
     @Test
     public void testPendingByCorrelationId() {
 
