@@ -18,6 +18,7 @@ import static org.junit.Assert.assertNotNull;
 import java.time.Duration;
 import java.util.List;
 
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,14 +61,14 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     
     public MongoTemplate mongoTemplate;
     
-    @ClassRule 
-    public static MongoDBContainer mongoDbContainer = new MongoDBContainer("mongo:4.2.8")
-    		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
+    public static MongoDBContainer mongoDbContainer;
 
-    @BeforeAll
+    @SuppressWarnings("resource")
+	@Before
     public void setup() {
-    	
-    	mongoDbContainer.start();
+    	mongoDbContainer = new MongoDBContainer("mongo:3.2.4")
+        		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
+    	 mongoDbContainer.start();
     	mongoTemplate = new MongoTemplate(MongoClients.create(mongoDbContainer.getReplicaSetUrl()), "test");
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }

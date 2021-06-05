@@ -25,10 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.junit.ClassRule;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -73,13 +72,13 @@ public class MongoQueueDAOTest {
     
     public MongoTemplate mongoTemplate;
     
-    @ClassRule 
-    public static MongoDBContainer mongoDbContainer = new MongoDBContainer("mongo:3.2.4")
-    		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
+    public static MongoDBContainer mongoDbContainer;
 
-    @BeforeAll
+    @SuppressWarnings("resource")
+	@Before
     public void setup() {
-    	
+    	mongoDbContainer = new MongoDBContainer("mongo:3.2.4")
+        		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
     	 mongoDbContainer.start();
     	 mongoTemplate = new MongoTemplate(MongoClients.create(mongoDbContainer.getReplicaSetUrl()), "test");
     	 
