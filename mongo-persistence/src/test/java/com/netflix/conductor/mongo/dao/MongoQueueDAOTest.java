@@ -41,6 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -50,6 +51,7 @@ import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
@@ -72,16 +74,21 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-    @Autowired
-    public MongoTemplate mongoTemplate;
-    
     private static final MongoDBContainer MONGO_DB_CONTAINER =
-    		  new MongoDBContainer("mongo:4.2.8");
+  		  new MongoDBContainer("mongo:4.2.8");
+  
+  private static final String MONGO_INITDB_DATABASE = "conductor";
+		  
 
-    @BeforeAll
-    static void setUpAll() {
-        MONGO_DB_CONTAINER.start();
-    }
+  @BeforeAll
+  static void setUpAll() {
+      MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
+  }
+  
+  @Bean
+  public MongoTemplate mongoTemplate() {
+  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
+  }
 
     @AfterAll
     static void tearDownAll() {
@@ -228,7 +235,7 @@ public class MongoQueueDAOTest {
         		.and("popped").is(false));
         
         try {
-        	long count = this.mongoTemplate.count(searchQuery, QueueMessageDocument.class);
+        	long count = mongoTemplate().count(searchQuery, QueueMessageDocument.class);
             assertEquals("Remaining queue size mismatch", expectedSize, count);
         } catch (Exception ex) {
             fail(ex.getMessage());
@@ -338,7 +345,7 @@ public class MongoQueueDAOTest {
         		.and("popped").is(false));
         
         try {
-        	long count = this.mongoTemplate.count(searchQuery, QueueMessageDocument.class);
+        	long count = mongoTemplate().count(searchQuery, QueueMessageDocument.class);
             assertEquals("Remaining queue size mismatch", expectedSize, count);
         } catch (Exception ex) {
             fail(ex.getMessage());

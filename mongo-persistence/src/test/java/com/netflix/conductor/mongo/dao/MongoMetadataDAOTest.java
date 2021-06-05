@@ -44,12 +44,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
@@ -72,17 +74,22 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    @Autowired
-    public MongoTemplate mongoTemplate;
-   
     private static final MongoDBContainer MONGO_DB_CONTAINER =
-    		  new MongoDBContainer("mongo:4.2.8");
+  		  new MongoDBContainer("mongo:4.2.8");
+  
+  private static final String MONGO_INITDB_DATABASE = "conductor";
+		  
 
-    @BeforeAll
-    static void setUpAll() {
-        MONGO_DB_CONTAINER.start();
-    }
-
+  @BeforeAll
+  static void setUpAll() {
+      MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
+  }
+  
+  @Bean
+  public MongoTemplate mongoTemplate() {
+  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
+  }
+    
     @AfterAll
     static void tearDownAll() {
       if (!MONGO_DB_CONTAINER.isShouldBeReused()) {
