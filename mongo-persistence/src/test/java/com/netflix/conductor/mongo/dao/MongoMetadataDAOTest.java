@@ -101,7 +101,7 @@ public class MongoMetadataDAOTest {
     
     @Before
     public void setup() {
-    	 metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
+    	 metadataDAO = new MongoMetadataDAO(objectMapper);
     }
     
     @Test

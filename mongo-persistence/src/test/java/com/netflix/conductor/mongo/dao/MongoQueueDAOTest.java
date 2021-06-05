@@ -102,7 +102,7 @@ public class MongoQueueDAOTest {
     @Before
     public void setup() {
     	
-         queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
+         queueDAO = new MongoQueueDAO(objectMapper);
          
     }
    

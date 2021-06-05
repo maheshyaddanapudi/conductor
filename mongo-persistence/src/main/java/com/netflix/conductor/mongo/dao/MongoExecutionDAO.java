@@ -78,8 +78,11 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	@Autowired
 	MongoPollDataRepository mongoPollDataRepository;
 
-	public MongoExecutionDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
-		super(objectMapper, mongoTemplate);
+	@Autowired
+	MongoTemplate mongoTemplate;
+	
+	public MongoExecutionDAO(ObjectMapper objectMapper) {
+		super(objectMapper);
 	}
 	
 	private static String dateStr(Long timeInMs) {
@@ -711,9 +714,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	        Query searchQuery= new Query();
 		 	searchQuery.addCriteria(Criteria.where("workflow_id").is(task.getWorkflowInstanceId()).and("task_key").is(taskKey));
 		 	
-		 	System.out.println("Remove Query -->"+searchQuery.toString());
-		 	
-	        mongoTemplate.remove(searchQuery, TaskScheduledDocument.class);
+		 	mongoTemplate.remove(searchQuery, TaskScheduledDocument.class);
 	    }
 	 
 	 private void removeWorkflowToTaskMapping(Task task) {

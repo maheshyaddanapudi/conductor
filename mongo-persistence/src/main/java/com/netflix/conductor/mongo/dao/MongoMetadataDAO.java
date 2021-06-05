@@ -41,8 +41,11 @@ import com.netflix.conductor.mongo.repositories.MongoMetadataWorkflowRepository;
 @Trace
 public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, EventHandlerDAO {
 	
-	 public MongoMetadataDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
-			super(objectMapper, mongoTemplate);
+		@Autowired
+		MongoTemplate mongoTemplate;
+		
+	 public MongoMetadataDAO(ObjectMapper objectMapper) {
+			super(objectMapper);
 		}
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MongoMetadataDAO.class);

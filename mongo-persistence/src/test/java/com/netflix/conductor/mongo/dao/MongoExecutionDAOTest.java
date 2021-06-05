@@ -32,7 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.testcontainers.containers.MongoDBContainer;
@@ -60,8 +59,6 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
     
-    @Autowired
-    public MongoTemplate mongoTemplate;
     
     private static final MongoDBContainer MONGO_DB_CONTAINER =
     		  new MongoDBContainer("mongo:4.2.8");
@@ -90,7 +87,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Before
     public void setup() {
     	
-    	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
+    	executionDAO = new MongoExecutionDAO(objectMapper);
     }
     
     @Test
