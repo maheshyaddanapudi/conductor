@@ -84,18 +84,16 @@ public class MongoQueueDAOTest {
   		  new MongoDBContainer("mongo:4.2.8");
   
   private static final String MONGO_INITDB_DATABASE = "conductor";
-		  
+		
+  @Autowired
+  MongoTemplate mongoTemplate;
 
   @BeforeAll
   static void setUpAll() {
       MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
   }
   
-  @Bean
-  public MongoTemplate mongoTemplate() {
-  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
-  }
-
+  
     @AfterAll
     static void tearDownAll() {
       if (!MONGO_DB_CONTAINER.isShouldBeReused()) {
@@ -110,6 +108,11 @@ public class MongoQueueDAOTest {
     	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
     	    ).applyTo(configurableApplicationContext);
     	  }
+    	  @Bean
+    	  public MongoTemplate mongoTemplate() {
+    	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
+    	  }
+
     	}
     
     @Before
@@ -241,7 +244,7 @@ public class MongoQueueDAOTest {
         		.and("popped").is(false));
         
         try {
-        	long count = mongoTemplate().count(searchQuery, QueueMessageDocument.class);
+        	long count = mongoTemplate.count(searchQuery, QueueMessageDocument.class);
             assertEquals("Remaining queue size mismatch", expectedSize, count);
         } catch (Exception ex) {
             fail(ex.getMessage());
@@ -351,7 +354,7 @@ public class MongoQueueDAOTest {
         		.and("popped").is(false));
         
         try {
-        	long count = mongoTemplate().count(searchQuery, QueueMessageDocument.class);
+        	long count = mongoTemplate.count(searchQuery, QueueMessageDocument.class);
             assertEquals("Remaining queue size mismatch", expectedSize, count);
         } catch (Exception ex) {
             fail(ex.getMessage());
