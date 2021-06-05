@@ -44,12 +44,11 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	@Autowired
 	MongoQueueMessageRepository mongoQueueMessageRepository;
 	
-	@Autowired
-	MongoTemplate mongoTemplate;
+	public MongoTemplate mongoTemplate;
 	
-	public MongoQueueDAO(ObjectMapper objectMapper) {
-		super(objectMapper);
-		
+	public MongoQueueDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
+		super(objectMapper, mongoTemplate);
+	
 		Executors.newSingleThreadScheduledExecutor()
         .scheduleAtFixedRate(this::processAllUnacks,
             UNACK_SCHEDULE_MS, UNACK_SCHEDULE_MS, TimeUnit.MILLISECONDS);

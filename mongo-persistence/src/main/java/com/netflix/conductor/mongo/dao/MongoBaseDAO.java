@@ -17,9 +17,11 @@ public abstract class MongoBaseDAO {
 	String DAO_NAME = "mongo";
 
     private final ObjectMapper objectMapper;
+    private final MongoTemplate mongoTemplate;
 
-    public MongoBaseDAO(ObjectMapper objectMapper) {
+    public MongoBaseDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
         this.objectMapper = objectMapper;
+        this.mongoTemplate = mongoTemplate;
     }
     
     String toJson(Object value) {

@@ -1,11 +1,13 @@
 package com.netflix.conductor.mongo.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,18 +24,21 @@ import com.netflix.conductor.mongo.dao.MongoQueueDAO;
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoConfiguration {
 	
+	@Autowired 
+	MongoTemplate mongoTemplate;
+	
 	@Bean
-    public MetadataDAO mongoMetadataDAO(ObjectMapper objectMapper) {
-        return new MongoMetadataDAO(objectMapper);
+    public MetadataDAO mongoMetadataDAO(ObjectMapper objectMapper,MongoTemplate mongoTemplate) {
+        return new MongoMetadataDAO(objectMapper, mongoTemplate);
     }
 
     @Bean
-    public ExecutionDAO mongoExecutionDAO(ObjectMapper objectMapper) {
-        return new MongoExecutionDAO(objectMapper);
+    public ExecutionDAO mongoExecutionDAO(ObjectMapper objectMapper,MongoTemplate mongoTemplate) {
+        return new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
 
     @Bean
-    public QueueDAO mongoQueueDAO(ObjectMapper objectMapper) {
-        return new MongoQueueDAO(objectMapper);
+    public QueueDAO mongoQueueDAO(ObjectMapper objectMapper,MongoTemplate mongoTemplate) {
+        return new MongoQueueDAO(objectMapper, mongoTemplate);
     }
 }

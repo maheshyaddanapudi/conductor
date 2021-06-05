@@ -78,11 +78,10 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	@Autowired
 	MongoPollDataRepository mongoPollDataRepository;
 
-	@Autowired
-	MongoTemplate mongoTemplate;
+	public MongoTemplate mongoTemplate;
 	
-	public MongoExecutionDAO(ObjectMapper objectMapper) {
-		super(objectMapper);
+	public MongoExecutionDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
+		super(objectMapper, mongoTemplate);
 	}
 	
 	private static String dateStr(Long timeInMs) {
