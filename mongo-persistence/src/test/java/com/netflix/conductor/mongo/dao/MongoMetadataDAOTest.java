@@ -28,45 +28,29 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import javax.validation.constraints.NotNull;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.util.TestPropertyValues;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, TestConfig.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
-@Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;
@@ -79,41 +63,10 @@ public class MongoMetadataDAOTest {
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
-
-    private static final MongoDBContainer MONGO_DB_CONTAINER =
-  		  new MongoDBContainer("mongo:4.2.8");
-  
-  private static final String MONGO_INITDB_DATABASE = "conductor";
-		
+    
   @Autowired
   MongoTemplate mongoTemplate;
 
-  @BeforeAll
-  static void setUpAll() {
-      MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
-  }
-  
-    
-    @AfterAll
-    static void tearDownAll() {
-      if (!MONGO_DB_CONTAINER.isShouldBeReused()) {
-        MONGO_DB_CONTAINER.stop();
-      }
-    }
-    
-    static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-    	  @Override
-    	  public void initialize(@NotNull ConfigurableApplicationContext configurableApplicationContext) {
-    	    TestPropertyValues.of(
-    	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
-    	    ).applyTo(configurableApplicationContext);
-    	  }
-    	  @Bean
-    	  public MongoTemplate mongoTemplate() {
-    	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
-    	  }
-    	}
-    
     @Before
     public void setup() {
     	 metadataDAO = new MongoMetadataDAO(objectMapper);
