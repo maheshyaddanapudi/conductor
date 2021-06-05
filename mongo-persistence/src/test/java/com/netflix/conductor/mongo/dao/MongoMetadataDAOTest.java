@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -31,10 +30,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -44,17 +41,16 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
+import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
@@ -71,19 +67,12 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
+    @Autowired
     public MongoTemplate mongoTemplate;
     
-    public static MongoDBContainer mongoDbContainer;
-
-    @SuppressWarnings("resource")
-	@Before
+    @Before
     public void setup() {
-    	mongoDbContainer = new MongoDBContainer("mongo:3.2.4")
-        		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
-    	 mongoDbContainer.start();
-         mongoTemplate = new MongoTemplate(MongoClients.create(mongoDbContainer.getReplicaSetUrl()), "test");
-         
-         metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
+    	 metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
     }
     
     @Test

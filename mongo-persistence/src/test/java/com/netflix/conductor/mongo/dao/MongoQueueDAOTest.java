@@ -18,7 +18,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,16 +40,15 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
+import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
@@ -69,19 +67,12 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-    
+    @Autowired
     public MongoTemplate mongoTemplate;
     
-    public static MongoDBContainer mongoDbContainer;
-
-    @SuppressWarnings("resource")
-	@Before
+    @Before
     public void setup() {
-    	mongoDbContainer = new MongoDBContainer("mongo:3.2.4")
-        		.withExposedPorts(27017).withEnv("MONGO_INITDB_DATABASE", "test").withStartupTimeout(Duration.ofSeconds(900));
-    	 mongoDbContainer.start();
-    	 mongoTemplate = new MongoTemplate(MongoClients.create(mongoDbContainer.getReplicaSetUrl()), "test");
-    	 
+    	
          queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
          
     }
