@@ -50,8 +50,8 @@ public class TestConfig {
     	  }
     	}
     
-    @Bean
+    /*@Bean
 	  public MongoTemplate mongoTemplate() {
 	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
-	  }
+	  }*/
 }

@@ -63,8 +63,6 @@ public class MongoQueueDAOTest {
 
     @Rule
     public ExpectedException expected = ExpectedException.none();
-
-    
 		
   @Autowired
   MongoTemplate mongoTemplate;
