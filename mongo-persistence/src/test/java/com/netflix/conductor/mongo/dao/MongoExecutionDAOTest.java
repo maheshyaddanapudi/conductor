@@ -26,7 +26,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -41,7 +40,6 @@ import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
     private MongoExecutionDAO executionDAO;
