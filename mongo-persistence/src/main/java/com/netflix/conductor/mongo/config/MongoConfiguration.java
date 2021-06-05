@@ -24,21 +24,18 @@ import com.netflix.conductor.mongo.dao.MongoQueueDAO;
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoConfiguration {
 	
-	@Autowired
-	MongoTemplate mongoTemplate;
- 
-   	@Bean
+	@Bean
     public MetadataDAO mongoMetadataDAO(ObjectMapper objectMapper) {
-        return new MongoMetadataDAO(objectMapper, mongoTemplate);
+        return new MongoMetadataDAO(objectMapper);
     }
 
     @Bean
     public ExecutionDAO mongoExecutionDAO(ObjectMapper objectMapper) {
-        return new MongoExecutionDAO(objectMapper, mongoTemplate);
+        return new MongoExecutionDAO(objectMapper);
     }
 
     @Bean
     public QueueDAO mongoQueueDAO(ObjectMapper objectMapper) {
-        return new MongoQueueDAO(objectMapper, mongoTemplate);
+        return new MongoQueueDAO(objectMapper);
     }
 }
