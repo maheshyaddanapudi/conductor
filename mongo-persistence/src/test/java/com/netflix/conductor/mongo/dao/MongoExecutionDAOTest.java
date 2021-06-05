@@ -26,11 +26,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
@@ -49,7 +45,6 @@ import com.netflix.conductor.dao.ExecutionDAOTest;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
-@Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
     private MongoExecutionDAO executionDAO;
