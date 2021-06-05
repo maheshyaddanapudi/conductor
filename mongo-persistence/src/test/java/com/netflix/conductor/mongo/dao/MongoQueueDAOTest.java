@@ -24,9 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.validation.constraints.NotNull;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -34,20 +38,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MongoQueueDAOTest {
@@ -67,6 +74,33 @@ public class MongoQueueDAOTest {
 
     @Autowired
     public MongoTemplate mongoTemplate;
+    
+    @Autowired
+    public MongoTemplate mongoTemplate;
+    
+    private static final MongoDBContainer MONGO_DB_CONTAINER =
+    		  new MongoDBContainer("mongo:4.2.8");
+
+    @BeforeAll
+    static void setUpAll() {
+        MONGO_DB_CONTAINER.start();
+    }
+
+    @AfterAll
+    static void tearDownAll() {
+      if (!MONGO_DB_CONTAINER.isShouldBeReused()) {
+        MONGO_DB_CONTAINER.stop();
+      }
+    }
+    
+    static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+    	  @Override
+    	  public void initialize(@NotNull ConfigurableApplicationContext configurableApplicationContext) {
+    	    TestPropertyValues.of(
+    	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
+    	    ).applyTo(configurableApplicationContext);
+    	  }
+    	}
     
     @Before
     public void setup() {
