@@ -75,9 +75,6 @@ public class MongoQueueDAOTest {
     @Autowired
     public MongoTemplate mongoTemplate;
     
-    @Autowired
-    public MongoTemplate mongoTemplate;
-    
     private static final MongoDBContainer MONGO_DB_CONTAINER =
     		  new MongoDBContainer("mongo:4.2.8");
 
