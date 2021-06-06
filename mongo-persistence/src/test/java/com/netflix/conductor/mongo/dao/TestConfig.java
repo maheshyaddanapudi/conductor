@@ -45,14 +45,14 @@ public class TestConfig {
     	  @Override
     	  public void initialize(@NotNull ConfigurableApplicationContext configurableApplicationContext) {
     	    TestPropertyValues.of(
-    	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl()),
-    	      String.format("spring.main.allow-bean-definition-overriding: %s",true)
+    	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
+    	      //, String.format("spring.main.allow-bean-definition-overriding: %s",true)
     	    ).applyTo(configurableApplicationContext);
     	  }
     	}
     
-    @Bean
+    /*@Bean
 	  public MongoTemplate mongoTemplate() {
 	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
-	  }
+	  }*/
 }
