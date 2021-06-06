@@ -10,9 +10,13 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.testcontainers.containers.MongoDBContainer;
+
+import com.mongodb.client.MongoClients;
 
 @TestConfiguration
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
@@ -42,8 +46,12 @@ public class TestConfig {
     	  public void initialize(@NotNull ConfigurableApplicationContext configurableApplicationContext) {
     	    TestPropertyValues.of(
     	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
-    	      //, String.format("spring.main.allow-bean-definition-overriding: %s",true)
+    	      , String.format("spring.main.allow-bean-definition-overriding: %s",true)
     	    ).applyTo(configurableApplicationContext);
+    	  }
+    	  @Bean
+    	  public MongoTemplate mongoTemplate() {
+    	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
     	  }
     	}
     
