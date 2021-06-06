@@ -70,7 +70,7 @@ public class MongoQueueDAOTest {
     @Before
     public void setup() {
     	
-         queueDAO = new MongoQueueDAO(objectMapper);
+         queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
          
     }
    

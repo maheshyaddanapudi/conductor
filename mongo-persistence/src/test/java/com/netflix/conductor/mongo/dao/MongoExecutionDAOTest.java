@@ -58,7 +58,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Before
     public void setup() {
     	
-    	executionDAO = new MongoExecutionDAO(objectMapper);
+    	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
     
     @Test
