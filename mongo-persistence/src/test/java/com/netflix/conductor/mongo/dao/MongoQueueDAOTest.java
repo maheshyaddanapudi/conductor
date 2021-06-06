@@ -37,6 +37,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -49,6 +50,7 @@ import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class,TestConfig.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 public class MongoQueueDAOTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoQueueDAOTest.class);

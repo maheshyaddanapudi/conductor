@@ -12,7 +12,8 @@
  */
 package com.netflix.conductor.mongo.dao;
 
-import static com.netflix.conductor.core.exception.ApplicationException.Code.BACKEND_ERROR;
+import static com.netflix.conductor.core.exception.ApplicationException.Code.CONFLICT;
+import static com.netflix.conductor.core.exception.ApplicationException.Code.NOT_FOUND;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -50,6 +52,7 @@ import com.netflix.conductor.core.exception.ApplicationException;
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, TestConfig.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;
@@ -75,7 +78,7 @@ public class MongoMetadataDAOTest {
     public void testDuplicateWorkflowDef() {
         expectedException.expect(ApplicationException.class);
         expectedException.expectMessage("Workflow with testDuplicate.1 already exists!");
-        expectedException.expect(hasProperty("code", is(BACKEND_ERROR)));
+        expectedException.expect(hasProperty("code", is(CONFLICT)));
 
         WorkflowDef def = new WorkflowDef();
         def.setName("testDuplicate");
@@ -236,7 +239,7 @@ public class MongoMetadataDAOTest {
     public void testRemoveNotExistingTaskDef() {
         expectedException.expect(ApplicationException.class);
         expectedException.expectMessage("No such task definition");
-        expectedException.expect(hasProperty("code", is(BACKEND_ERROR)));
+        expectedException.expect(hasProperty("code", is(NOT_FOUND)));
 
         metadataDAO.removeTaskDef("test" + UUID.randomUUID().toString());
     }
