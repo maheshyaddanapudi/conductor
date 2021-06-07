@@ -53,6 +53,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
@@ -78,23 +79,19 @@ public class MongoQueueDAOTest {
     public ExpectedException expected = ExpectedException.none();
 		
 
-    @Autowired
-    MongoTemplate mongoTemplate;
+public MongoTemplate mongoTemplate;
     
-    final static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23"));
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-      registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-    }
+    final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23")).withEnv("MONGO_INITDB_DATABASE", "conductor");
 
 	@BeforeAll
-	public static void setUpAll() {
+	public void setUpAll() {
         mongoDBContainer.start();
+        mongoTemplate = new MongoTemplate(MongoClients.create(mongoDBContainer.getReplicaSetUrl()),"conductor"); 
+        
     }
     
 	@AfterAll
-    public static void tearDownAll() {
+    public void tearDownAll() {
       if (!mongoDBContainer.isShouldBeReused()) {
     	  mongoDBContainer.stop();
       }

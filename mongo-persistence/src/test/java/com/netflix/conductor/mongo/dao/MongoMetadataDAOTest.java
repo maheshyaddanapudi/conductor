@@ -46,13 +46,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
@@ -78,23 +77,19 @@ public class MongoMetadataDAOTest {
     public ExpectedException expectedException = ExpectedException.none();
     
 
-    @Autowired
-    MongoTemplate mongoTemplate;
+    public MongoTemplate mongoTemplate;
     
-    final static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23"));
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-      registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-    }
+    final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23")).withEnv("MONGO_INITDB_DATABASE", "conductor");
 
 	@BeforeAll
-	public static void setUpAll() {
+	public void setUpAll() {
         mongoDBContainer.start();
+        mongoTemplate = new MongoTemplate(MongoClients.create(mongoDBContainer.getReplicaSetUrl()),"conductor"); 
+        
     }
 	
 	@AfterAll
-    public static void tearDownAll() {
+    public void tearDownAll() {
       if (!mongoDBContainer.isShouldBeReused()) {
     	  mongoDBContainer.stop();
       }

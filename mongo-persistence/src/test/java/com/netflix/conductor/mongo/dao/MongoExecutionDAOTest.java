@@ -41,6 +41,7 @@ import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.run.Workflow;
@@ -49,7 +50,6 @@ import com.netflix.conductor.dao.ExecutionDAOTest;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
-@DataMongoTest(excludeAutoConfiguration = EmbeddedMongoAutoConfiguration.class)
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
@@ -65,23 +65,19 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
     
-    @Autowired
-    MongoTemplate mongoTemplate;
+    public MongoTemplate mongoTemplate;
     
-    final static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23"));
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-      registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-    }
+    final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23")).withEnv("MONGO_INITDB_DATABASE", "conductor");
 
 	@BeforeAll
-	public static void setUpAll() {
+	public void setUpAll() {
         mongoDBContainer.start();
+        mongoTemplate = new MongoTemplate(MongoClients.create(mongoDBContainer.getReplicaSetUrl()),"conductor"); 
+        
     }
 	
 	@AfterAll
-    public static void tearDownAll() {
+    public void tearDownAll() {
       if (!mongoDBContainer.isShouldBeReused()) {
     	  mongoDBContainer.stop();
       }
