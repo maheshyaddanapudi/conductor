@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import com.mongodb.client.MongoClients;
 
@@ -24,8 +25,8 @@ import com.mongodb.client.MongoClients;
 public class MongoTestConfiguration {
 	
 	private static final MongoDBContainer MONGO_DB_CONTAINER =
-  		  new MongoDBContainer("mongo:4.4.6");
-  
+  		  new MongoDBContainer("mongo:3.6.23");
+	
     private static final String MONGO_INITDB_DATABASE = "conductor";
 	
 
@@ -46,17 +47,16 @@ public class MongoTestConfiguration {
     	  public void initialize(@NotNull ConfigurableApplicationContext configurableApplicationContext) {
     	    TestPropertyValues.of(
     	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
-    	      , String.format("spring.main.allow-bean-definition-overriding: %s",true)
     	    ).applyTo(configurableApplicationContext);
-    	  }
-    	  @Bean
-    	  public MongoTemplate mongoTemplate() {
-    	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
+    	    TestPropertyValues.of(
+    	    	      String.format("spring.main.allow-bean-definition-overriding: %s","true")
+    	    	    ).applyTo(configurableApplicationContext);
+    	    
     	  }
     	}
     
-    /*@Bean
+    @Bean
 	  public MongoTemplate mongoTemplate() {
 	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
-	  }*/
+	  }
 }

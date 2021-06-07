@@ -29,40 +29,29 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.embedded.EmbeddedMongoAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.testcontainers.containers.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
+import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
-@DataMongoTest(excludeAutoConfiguration = EmbeddedMongoAutoConfiguration.class)
-@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
-@Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
+@SpringBootTest
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;
@@ -76,26 +65,10 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
     
-
+    @Autowired
     public MongoTemplate mongoTemplate;
     
-    final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23")).withEnv("MONGO_INITDB_DATABASE", "conductor");
-
-	@BeforeAll
-	public void setUpAll() {
-        mongoDBContainer.start();
-        mongoTemplate = new MongoTemplate(MongoClients.create(mongoDBContainer.getReplicaSetUrl()),"conductor"); 
-        
-    }
-	
-	@AfterAll
-    public void tearDownAll() {
-      if (!mongoDBContainer.isShouldBeReused()) {
-    	  mongoDBContainer.stop();
-      }
-    }
-    
-    @BeforeEach
+    @Before
     public void setup() {
     	 metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
     }
