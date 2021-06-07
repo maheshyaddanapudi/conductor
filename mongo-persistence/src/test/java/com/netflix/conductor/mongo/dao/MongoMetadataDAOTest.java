@@ -29,18 +29,25 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.mongo.embedded.EmbeddedMongoAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
@@ -49,10 +56,10 @@ import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, TestConfig.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
+@DataMongoTest(excludeAutoConfiguration = EmbeddedMongoAutoConfiguration.class)
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;
@@ -66,10 +73,30 @@ public class MongoMetadataDAOTest {
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
     
-  @Autowired
-  MongoTemplate mongoTemplate;
 
-    @Before
+    @Autowired
+    MongoTemplate mongoTemplate;
+    
+    final static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.0.10"));
+
+    @DynamicPropertySource
+    static void setProperties(DynamicPropertyRegistry registry) {
+      registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+    }
+
+	@BeforeAll
+	public static void setUpAll() {
+        mongoDBContainer.start();
+    }
+	
+	@AfterAll
+    public static void tearDownAll() {
+      if (!mongoDBContainer.isShouldBeReused()) {
+    	  mongoDBContainer.stop();
+      }
+    }
+    
+    @BeforeEach
     public void setup() {
     	 metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
     }
@@ -92,7 +119,7 @@ public class MongoMetadataDAOTest {
     public void testRemoveNotExistingWorkflowDef() {
         expectedException.expect(ApplicationException.class);
         expectedException.expectMessage("No such workflow definition: test version: 1");
-        //expectedException.expect(hasProperty("code", is(NOT_FOUND)));
+        expectedException.expect(hasProperty("code", is(NOT_FOUND)));
 
         metadataDAO.removeWorkflowDef("test", 1);
     }
