@@ -77,7 +77,7 @@ public class MongoQueueDAOTest {
     @Autowired
     MongoTemplate mongoTemplate;
     
-    final static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:4.0.10"));
+    final static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:3.6.23"));
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
