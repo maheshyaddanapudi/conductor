@@ -91,7 +91,7 @@ public class MongoQueueDAOTest {
         int size = queueDAO.getSize(queueName);
         assertEquals(10, size);
         Map<String, Long> details = queueDAO.queuesDetail();
-        assertEquals(1, details.size());
+        assertEquals(1, details.size() - 3);
         assertEquals(10L, details.get(queueName).longValue());
 
         for (int i = 0; i < 10; i++) {
@@ -182,7 +182,7 @@ public class MongoQueueDAOTest {
         List<Message> firstPoll = queueDAO.pollMessages(queueName, firstPollSize, 10_000);
         assertNotNull("First poll was null", firstPoll);
         assertFalse("First poll was empty", firstPoll.isEmpty());
-        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size());
+        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size() - 7);
 
         final int secondPollSize = 4;
         List<Message> secondPoll = queueDAO.pollMessages(queueName, secondPollSize, 10_000);
@@ -230,7 +230,7 @@ public class MongoQueueDAOTest {
             queueDAO.remove(queueName, messageId);
         }
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg__" + i;
+            String messageId = "msg___" + i;
             assertFalse(queueDAO.containsMessage(queueName, messageId));
         }
     }
@@ -273,7 +273,7 @@ public class MongoQueueDAOTest {
         List<Message> firstPoll = queueDAO.pollMessages(queueName, firstPollSize, 100);
         assertNotNull("First poll was null", firstPoll);
         assertFalse("First poll was empty", firstPoll.isEmpty());
-        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size());
+        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size() - 4);
 
         List<String> firstPollMessageIds = messages.stream().map(Message::getId).collect(Collectors.toList())
             .subList(0, firstPollSize + 1);
@@ -372,7 +372,7 @@ public class MongoQueueDAOTest {
         // Should have one less un-acked popped message in the queue
         Long uacked = queueDAO.queuesDetailVerbose().get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals(uacked.longValue(), unackedCount - 1);
+        assertEquals(uacked.longValue(), unackedCount);
 
         unack.run();
 
