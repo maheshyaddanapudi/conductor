@@ -97,7 +97,14 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public void removeTaskDef(String name) {
         try {
             recordMongoDaoRequests("removeTaskDef");
-            mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaTaskDefDocument.class);
+            long deletedCount = mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaTaskDefDocument.class).getDeletedCount();
+            if(deletedCount == 0)
+            {
+            	Monitors.error(CLASS_NAME, "removeTaskDef");
+                String errorMsg = String.format("No such task definition: %s", name);
+                LOGGER.error(errorMsg);
+                throw new ApplicationException(Code.NOT_FOUND, errorMsg);
+            }
         } catch (Exception e) {
             Monitors.error(CLASS_NAME, "removeTaskDef");
             String errorMsg = String.format("No such task definition: %s", name);
@@ -191,11 +198,20 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public void removeWorkflowDef(String name, Integer version) {
         try {
             recordMongoDaoRequests("removeWorkflowDef");
-            mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name).and("version").is(version)), MetaWorkflowDefDocument.class);
-            Optional<Integer> maxVersion = getLatestVersion(name);
-            maxVersion.ifPresent(newVersion -> updateLatestVersion(name, newVersion));
+            long deletedCount = mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name).and("version").is(version)), MetaWorkflowDefDocument.class).getDeletedCount();
+            if(deletedCount == 0)
+            {
+            	Monitors.error(CLASS_NAME, "removeWorkflowDef");
+            	String errorMsg = String.format("No such workflow definition: %s version: %d", name, version);
+                LOGGER.error(errorMsg);
+                throw new ApplicationException(Code.NOT_FOUND, errorMsg);
+            }
+            else {
+            	Optional<Integer> maxVersion = getLatestVersion(name);
+                maxVersion.ifPresent(newVersion -> updateLatestVersion(name, newVersion));
+            }
         } catch (Exception e) {
-            Monitors.error(CLASS_NAME, "removeTaskDef");
+            Monitors.error(CLASS_NAME, "removeWorkflowDef");
             String errorMsg = String.format("No such workflow definition: %s version: %d", name, version);
             LOGGER.error(errorMsg, e);
             throw new ApplicationException(Code.NOT_FOUND, errorMsg, e);
@@ -274,7 +290,15 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
                 "EventHandler with name " + name + " doesn't exists!");
         }
 
-        mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaEventHandlerDocument.class);
+        long deletedCount = mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaEventHandlerDocument.class).getDeletedCount();
+        
+        if(deletedCount == 0)
+        {
+        	Monitors.error(CLASS_NAME, "removeWorkflowDef");
+        	String errorMsg = String.format("No such EventHandler: %s", name);
+            LOGGER.error(errorMsg);
+            throw new ApplicationException(Code.NOT_FOUND, errorMsg);
+        }
     }
 
 	@SuppressWarnings("unchecked")
