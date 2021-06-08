@@ -263,7 +263,7 @@ public class MongoQueueDAOTest {
             } else {
                 // Set all other queue messages to have enough of a delay that they won't accidentally
                 // be picked up.
-                offset = 10_000 + i;
+                offset = 10000 + i;
             }
 
             String payload = "{\"id\": " + i + ",\"offset_time_seconds\":" + offset + "}";
@@ -293,7 +293,7 @@ public class MongoQueueDAOTest {
 
         // Sleep a bit to get the next batch of messages
         LOGGER.debug("Sleeping for second poll...");
-        Thread.sleep(5_000);
+        Thread.sleep(5000);
 
         // Poll for many more messages than expected
         List<Message> secondPoll = queueDAO.pollMessages(queueName, secondPollSize + 10, 100);

@@ -302,7 +302,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
     	orderBy.add(new Order(Direction.ASC, "created_on"));
     	orderBy.add(new Order(Direction.ASC, "deliver_on"));
     	query.with(Sort.by(orderBy));
-    	query.cursorBatchSize(count);
+    	query.limit(count);
     	
     	List<Message> results = new ArrayList<>();
     	
