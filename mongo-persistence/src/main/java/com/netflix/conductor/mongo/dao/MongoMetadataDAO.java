@@ -27,6 +27,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationSpELExpression;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -34,6 +36,8 @@ import org.springframework.data.mongodb.core.query.Update;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
 import com.netflix.conductor.annotations.Trace;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
@@ -541,8 +545,9 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
     	List<WorkflowDef> result = new ArrayList<WorkflowDef>();
     	
         Query query = new Query();
-        query.addCriteria(Criteria.where("version").is("$latest_version"));
-    	
+        query.addCriteria(Criteria.where("version").elemMatch(Criteria.where("latest_version").exists(true)));
+        
+        
         //query.fields().include("version").equals(query.fields().include("latest_version"));
         
         mongoTemplate.find(query, MetaWorkflowDefDocument.class).forEach(wdd -> {
