@@ -51,7 +51,7 @@ import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 public class MongoMetadataDAOTest {
 
    private MongoMetadataDAO metadataDAO;

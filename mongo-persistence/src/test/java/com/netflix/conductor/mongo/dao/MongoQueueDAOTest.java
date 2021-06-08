@@ -49,7 +49,7 @@ import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 public class MongoQueueDAOTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoQueueDAOTest.class);
