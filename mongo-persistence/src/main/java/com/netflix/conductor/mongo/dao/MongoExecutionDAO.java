@@ -603,7 +603,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		update.set("json_data", toJson(task));
 		update.set("task_id", task.getTaskId());
 		
-		mongoTemplate.upsert(updateQuery, update, TaskDataDocument.class).getModifiedCount();
+		mongoTemplate.upsert(updateQuery, update, TaskDataDocument.class);
     }
 	
 	private void removeTaskData(Task task) {

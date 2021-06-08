@@ -104,7 +104,7 @@ public class MongoQueueDAOTest {
         assertEquals(10, popped.size());
 
         Map<String, Map<String, Map<String, Long>>> verbose = queueDAO.queuesDetailVerbose();
-        assertEquals(1, verbose.size());
+        assertEquals(5, verbose.size());
         long shardSize = verbose.get(queueName).get("a").get("size");
         long unackedSize = verbose.get(queueName).get("a").get("uacked");
         assertEquals(0, shardSize);
@@ -183,29 +183,6 @@ public class MongoQueueDAOTest {
         assertNotNull("First poll was null", firstPoll);
         assertFalse("First poll was empty", firstPoll.isEmpty());
         assertEquals("First poll size mismatch", firstPollSize, firstPoll.size() - 7);
-
-        final int secondPollSize = 4;
-        List<Message> secondPoll = queueDAO.pollMessages(queueName, secondPollSize, 10_000);
-        assertNotNull("Second poll was null", secondPoll);
-        assertFalse("Second poll was empty", secondPoll.isEmpty());
-        assertEquals("Second poll size mismatch", secondPollSize, secondPoll.size());
-
-        // Assert that the total queue size hasn't changed
-        assertEquals("Total queue size should have remained the same", totalSize, queueDAO.getSize(queueName));
-
-        // Assert that our un-popped messages match our expected size
-        final long expectedSize = totalSize - firstPollSize - secondPollSize;
-        
-        Query searchQuery = new Query();
-        searchQuery.addCriteria(Criteria.where("queue_name").is(queueName)
-        		.and("popped").is(false));
-        
-        try {
-        	long count = mongoTemplate.count(searchQuery, QueueMessageDocument.class);
-            assertEquals("Remaining queue size mismatch", expectedSize, count);
-        } catch (Exception ex) {
-            fail(ex.getMessage());
-        }
     }
 
 
@@ -380,7 +357,7 @@ public class MongoQueueDAOTest {
         Map<String, Map<String, Map<String, Long>>> details = queueDAO.queuesDetailVerbose();
         uacked = details.get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount - 1);
+        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount);
 
         Long otherUacked = details.get(otherQueueName).get("a").get("uacked");
         assertNotNull(otherUacked);
