@@ -32,6 +32,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -68,7 +69,7 @@ public class MongoMetadataDAOTest {
     public TestName name = new TestName();
 
     @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+    public ExpectedException thrown = ExpectedException.none();
     
     private static final MongoDBContainer MONGO_DB_CONTAINER =
   		  new MongoDBContainer("mongo:3.6.23");
@@ -77,7 +78,7 @@ public class MongoMetadataDAOTest {
 	  
 	  public MongoTemplate mongoTemplate;
 	  
-	  @Before
+	  @BeforeAll
 	  public void setup() {
 	  	
 	  	if(!MONGO_DB_CONTAINER.isRunning())
@@ -88,216 +89,216 @@ public class MongoMetadataDAOTest {
     	metadataDAO = new MongoMetadataDAO(objectMapper, mongoTemplate);
     }
     
-    @Test
-    public void testDuplicateWorkflowDef() {
-        expectedException.expect(ApplicationException.class);
-        expectedException.expectMessage("Workflow with testDuplicate.1 already exists!");
-        expectedException.expect(hasProperty("code", is(CONFLICT)));
+	  @Test
+	    public void testDuplicateWorkflowDef() {
+	        thrown.expect(ApplicationException.class);
+	        thrown.expectMessage("Workflow with testDuplicate.1 already exists!");
+	        thrown.expect(hasProperty("code", is(CONFLICT)));
 
-        WorkflowDef def = new WorkflowDef();
-        def.setName("testDuplicate");
-        def.setVersion(1);
+	        WorkflowDef def = new WorkflowDef();
+	        def.setName("testDuplicate");
+	        def.setVersion(1);
 
-        metadataDAO.createWorkflowDef(def);
-        metadataDAO.createWorkflowDef(def);
-    }
+	        metadataDAO.createWorkflowDef(def);
+	        metadataDAO.createWorkflowDef(def);
+	    }
 
-    @Test
-    public void testRemoveNotExistingWorkflowDef() {
-        expectedException.expect(ApplicationException.class);
-        expectedException.expectMessage("No such workflow definition: test version: 1");
-        expectedException.expect(hasProperty("code", is(NOT_FOUND)));
+	    @Test
+	    public void testRemoveNotExistingWorkflowDef() {
+	        thrown.expect(ApplicationException.class);
+	        thrown.expectMessage("No such workflow definition: test version: 1");
+	        thrown.expect(hasProperty("code", is(NOT_FOUND)));
 
-        metadataDAO.removeWorkflowDef("test", 1);
-    }
+	        metadataDAO.removeWorkflowDef("test", 1);
+	    }
 
-    @Test
-    public void testWorkflowDefOperations() {
-        WorkflowDef def = new WorkflowDef();
-        def.setName("test");
-        def.setVersion(1);
-        def.setDescription("description");
-        def.setCreatedBy("unit_test");
-        def.setCreateTime(1L);
-        def.setOwnerApp("ownerApp");
-        def.setUpdatedBy("unit_test2");
-        def.setUpdateTime(2L);
+	    @Test
+	    public void testWorkflowDefOperations() {
+	        WorkflowDef def = new WorkflowDef();
+	        def.setName("test");
+	        def.setVersion(1);
+	        def.setDescription("description");
+	        def.setCreatedBy("unit_test");
+	        def.setCreateTime(1L);
+	        def.setOwnerApp("ownerApp");
+	        def.setUpdatedBy("unit_test2");
+	        def.setUpdateTime(2L);
 
-        metadataDAO.createWorkflowDef(def);
+	        metadataDAO.createWorkflowDef(def);
 
-        List<WorkflowDef> all = metadataDAO.getAllWorkflowDefs();
-        assertNotNull(all);
-        assertEquals(1, all.size());
-        assertEquals("test", all.get(0).getName());
-        assertEquals(1, all.get(0).getVersion());
+	        List<WorkflowDef> all = metadataDAO.getAllWorkflowDefs();
+	        assertNotNull(all);
+	        assertEquals(1, all.size());
+	        assertEquals("test", all.get(0).getName());
+	        assertEquals(1, all.get(0).getVersion());
 
-        WorkflowDef found = metadataDAO.getWorkflowDef("test", 1).get();
-        assertTrue(EqualsBuilder.reflectionEquals(def, found));
+	        WorkflowDef found = metadataDAO.getWorkflowDef("test", 1).get();
+	        assertTrue(EqualsBuilder.reflectionEquals(def, found));
 
-        def.setVersion(3);
-        metadataDAO.createWorkflowDef(def);
+	        def.setVersion(3);
+	        metadataDAO.createWorkflowDef(def);
 
-        all = metadataDAO.getAllWorkflowDefs();
-        assertNotNull(all);
-        assertEquals(2, all.size());
-        assertEquals("test", all.get(0).getName());
-        assertEquals(1, all.get(0).getVersion());
+	        all = metadataDAO.getAllWorkflowDefs();
+	        assertNotNull(all);
+	        assertEquals(2, all.size());
+	        assertEquals("test", all.get(0).getName());
+	        assertEquals(1, all.get(0).getVersion());
 
-        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
-        assertEquals(def.getName(), found.getName());
-        assertEquals(def.getVersion(), found.getVersion());
-        assertEquals(3, found.getVersion());
+	        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
+	        assertEquals(def.getName(), found.getName());
+	        assertEquals(def.getVersion(), found.getVersion());
+	        assertEquals(3, found.getVersion());
 
-        all = metadataDAO.getAllLatest();
-        assertNotNull(all);
-        assertEquals(1, all.size());
-        assertEquals("test", all.get(0).getName());
-        assertEquals(3, all.get(0).getVersion());
+	        all = metadataDAO.getAllLatest();
+	        assertNotNull(all);
+	        assertEquals(1, all.size());
+	        assertEquals("test", all.get(0).getName());
+	        assertEquals(3, all.get(0).getVersion());
 
-        all = metadataDAO.getAllVersions(def.getName());
-        assertNotNull(all);
-        assertEquals(2, all.size());
-        assertEquals("test", all.get(0).getName());
-        assertEquals("test", all.get(1).getName());
-        assertEquals(1, all.get(0).getVersion());
-        assertEquals(3, all.get(1).getVersion());
+	        all = metadataDAO.getAllVersions(def.getName());
+	        assertNotNull(all);
+	        assertEquals(2, all.size());
+	        assertEquals("test", all.get(0).getName());
+	        assertEquals("test", all.get(1).getName());
+	        assertEquals(1, all.get(0).getVersion());
+	        assertEquals(3, all.get(1).getVersion());
 
-        def.setDescription("updated");
-        metadataDAO.updateWorkflowDef(def);
-        found = metadataDAO.getWorkflowDef(def.getName(), def.getVersion()).get();
-        assertEquals(def.getDescription(), found.getDescription());
+	        def.setDescription("updated");
+	        metadataDAO.updateWorkflowDef(def);
+	        found = metadataDAO.getWorkflowDef(def.getName(), def.getVersion()).get();
+	        assertEquals(def.getDescription(), found.getDescription());
 
-        List<String> allnames = metadataDAO.findAll();
-        assertNotNull(allnames);
-        assertEquals(1, allnames.size());
-        assertEquals(def.getName(), allnames.get(0));
+	        List<String> allnames = metadataDAO.findAll();
+	        assertNotNull(allnames);
+	        assertEquals(1, allnames.size());
+	        assertEquals(def.getName(), allnames.get(0));
 
-        def.setVersion(2);
-        metadataDAO.createWorkflowDef(def);
+	        def.setVersion(2);
+	        metadataDAO.createWorkflowDef(def);
 
-        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
-        assertEquals(def.getName(), found.getName());
-        assertEquals(3, found.getVersion());
+	        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
+	        assertEquals(def.getName(), found.getName());
+	        assertEquals(3, found.getVersion());
 
-        metadataDAO.removeWorkflowDef("test", 3);
-        Optional<WorkflowDef> deleted = metadataDAO.getWorkflowDef("test", 3);
-        assertFalse(deleted.isPresent());
+	        metadataDAO.removeWorkflowDef("test", 3);
+	        Optional<WorkflowDef> deleted = metadataDAO.getWorkflowDef("test", 3);
+	        assertFalse(deleted.isPresent());
 
-        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
-        assertEquals(def.getName(), found.getName());
-        assertEquals(2, found.getVersion());
+	        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
+	        assertEquals(def.getName(), found.getName());
+	        assertEquals(2, found.getVersion());
 
-        metadataDAO.removeWorkflowDef("test", 1);
-        deleted = metadataDAO.getWorkflowDef("test", 1);
-        assertFalse(deleted.isPresent());
+	        metadataDAO.removeWorkflowDef("test", 1);
+	        deleted = metadataDAO.getWorkflowDef("test", 1);
+	        assertFalse(deleted.isPresent());
 
-        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
-        assertEquals(def.getName(), found.getName());
-        assertEquals(2, found.getVersion());
-    }
+	        found = metadataDAO.getLatestWorkflowDef(def.getName()).get();
+	        assertEquals(def.getName(), found.getName());
+	        assertEquals(2, found.getVersion());
+	    }
 
-    @Test
-    public void testTaskDefOperations() {
-        TaskDef def = new TaskDef("taskA");
-        def.setDescription("description");
-        def.setCreatedBy("unit_test");
-        def.setCreateTime(1L);
-        def.setInputKeys(Arrays.asList("a", "b", "c"));
-        def.setOutputKeys(Arrays.asList("01", "o2"));
-        def.setOwnerApp("ownerApp");
-        def.setRetryCount(3);
-        def.setRetryDelaySeconds(100);
-        def.setRetryLogic(TaskDef.RetryLogic.FIXED);
-        def.setTimeoutPolicy(TaskDef.TimeoutPolicy.ALERT_ONLY);
-        def.setUpdatedBy("unit_test2");
-        def.setUpdateTime(2L);
+	    @Test
+	    public void testTaskDefOperations() throws Exception {
+	        TaskDef def = new TaskDef("taskA");
+	        def.setDescription("description");
+	        def.setCreatedBy("unit_test");
+	        def.setCreateTime(1L);
+	        def.setInputKeys(Arrays.asList("a", "b", "c"));
+	        def.setOutputKeys(Arrays.asList("01", "o2"));
+	        def.setOwnerApp("ownerApp");
+	        def.setRetryCount(3);
+	        def.setRetryDelaySeconds(100);
+	        def.setRetryLogic(TaskDef.RetryLogic.FIXED);
+	        def.setTimeoutPolicy(TaskDef.TimeoutPolicy.ALERT_ONLY);
+	        def.setUpdatedBy("unit_test2");
+	        def.setUpdateTime(2L);
 
-        metadataDAO.createTaskDef(def);
+	        metadataDAO.createTaskDef(def);
 
-        TaskDef found = metadataDAO.getTaskDef(def.getName());
-        assertTrue(EqualsBuilder.reflectionEquals(def, found));
+	        TaskDef found = metadataDAO.getTaskDef(def.getName());
+	        assertTrue(EqualsBuilder.reflectionEquals(def, found));
 
-        def.setDescription("updated description");
-        metadataDAO.updateTaskDef(def);
-        found = metadataDAO.getTaskDef(def.getName());
-        assertTrue(EqualsBuilder.reflectionEquals(def, found));
-        assertEquals("updated description", found.getDescription());
+	        def.setDescription("updated description");
+	        metadataDAO.updateTaskDef(def);
+	        found = metadataDAO.getTaskDef(def.getName());
+	        assertTrue(EqualsBuilder.reflectionEquals(def, found));
+	        assertEquals("updated description", found.getDescription());
 
-        for (int i = 0; i < 9; i++) {
-            TaskDef tdf = new TaskDef("taskA" + i);
-            metadataDAO.createTaskDef(tdf);
-        }
+	        for (int i = 0; i < 9; i++) {
+	            TaskDef tdf = new TaskDef("taskA" + i);
+	            metadataDAO.createTaskDef(tdf);
+	        }
 
-        List<TaskDef> all = metadataDAO.getAllTaskDefs();
-        assertNotNull(all);
-        assertEquals(10, all.size());
-        Set<String> allnames = all.stream().map(TaskDef::getName).collect(Collectors.toSet());
-        assertEquals(10, allnames.size());
-        List<String> sorted = allnames.stream().sorted().collect(Collectors.toList());
-        assertEquals(def.getName(), sorted.get(0));
+	        List<TaskDef> all = metadataDAO.getAllTaskDefs();
+	        assertNotNull(all);
+	        assertEquals(10, all.size());
+	        Set<String> allnames = all.stream().map(TaskDef::getName).collect(Collectors.toSet());
+	        assertEquals(10, allnames.size());
+	        List<String> sorted = allnames.stream().sorted().collect(Collectors.toList());
+	        assertEquals(def.getName(), sorted.get(0));
 
-        for (int i = 0; i < 9; i++) {
-            assertEquals(def.getName() + i, sorted.get(i + 1));
-        }
+	        for (int i = 0; i < 9; i++) {
+	            assertEquals(def.getName() + i, sorted.get(i + 1));
+	        }
 
-        for (int i = 0; i < 9; i++) {
-            metadataDAO.removeTaskDef(def.getName() + i);
-        }
-        all = metadataDAO.getAllTaskDefs();
-        assertNotNull(all);
-        assertEquals(1, all.size());
-        assertEquals(def.getName(), all.get(0).getName());
-    }
+	        for (int i = 0; i < 9; i++) {
+	            metadataDAO.removeTaskDef(def.getName() + i);
+	        }
+	        all = metadataDAO.getAllTaskDefs();
+	        assertNotNull(all);
+	        assertEquals(1, all.size());
+	        assertEquals(def.getName(), all.get(0).getName());
+	    }
 
-    @Test
-    public void testRemoveNotExistingTaskDef() {
-        expectedException.expect(ApplicationException.class);
-        expectedException.expectMessage("No such task definition");
-        expectedException.expect(hasProperty("code", is(NOT_FOUND)));
+	    @Test
+	    public void testRemoveNotExistingTaskDef() {
+	        thrown.expect(ApplicationException.class);
+	        thrown.expectMessage("No such task definition");
+	        thrown.expect(hasProperty("code", is(NOT_FOUND)));
 
-        metadataDAO.removeTaskDef("test" + UUID.randomUUID().toString());
-    }
+	        metadataDAO.removeTaskDef("test" + UUID.randomUUID().toString());
+	    }
 
-    @Test
-    public void testEventHandlers() {
-        String event1 = "SQS::arn:account090:sqstest1";
-        String event2 = "SQS::arn:account090:sqstest2";
+	    @Test
+	    public void testEventHandlers() {
+	        String event1 = "SQS::arn:account090:sqstest1";
+	        String event2 = "SQS::arn:account090:sqstest2";
 
-        EventHandler eventHandler = new EventHandler();
-        eventHandler.setName(UUID.randomUUID().toString());
-        eventHandler.setActive(false);
-        EventHandler.Action action = new EventHandler.Action();
-        action.setAction(EventHandler.Action.Type.start_workflow);
-        action.setStart_workflow(new EventHandler.StartWorkflow());
-        action.getStart_workflow().setName("workflow_x");
-        eventHandler.getActions().add(action);
-        eventHandler.setEvent(event1);
+	        EventHandler eventHandler = new EventHandler();
+	        eventHandler.setName(UUID.randomUUID().toString());
+	        eventHandler.setActive(false);
+	        EventHandler.Action action = new EventHandler.Action();
+	        action.setAction(EventHandler.Action.Type.start_workflow);
+	        action.setStart_workflow(new EventHandler.StartWorkflow());
+	        action.getStart_workflow().setName("workflow_x");
+	        eventHandler.getActions().add(action);
+	        eventHandler.setEvent(event1);
 
-        metadataDAO.addEventHandler(eventHandler);
-        List<EventHandler> all = metadataDAO.getAllEventHandlers();
-        assertNotNull(all);
-        assertEquals(1, all.size());
-        assertEquals(eventHandler.getName(), all.get(0).getName());
-        assertEquals(eventHandler.getEvent(), all.get(0).getEvent());
+	        metadataDAO.addEventHandler(eventHandler);
+	        List<EventHandler> all = metadataDAO.getAllEventHandlers();
+	        assertNotNull(all);
+	        assertEquals(1, all.size());
+	        assertEquals(eventHandler.getName(), all.get(0).getName());
+	        assertEquals(eventHandler.getEvent(), all.get(0).getEvent());
 
-        List<EventHandler> byEvents = metadataDAO.getEventHandlersForEvent(event1, true);
-        assertNotNull(byEvents);
-        assertEquals(0, byEvents.size());        //event is marked as in-active
+	        List<EventHandler> byEvents = metadataDAO.getEventHandlersForEvent(event1, true);
+	        assertNotNull(byEvents);
+	        assertEquals(0, byEvents.size());        //event is marked as in-active
 
-        eventHandler.setActive(true);
-        eventHandler.setEvent(event2);
-        metadataDAO.updateEventHandler(eventHandler);
+	        eventHandler.setActive(true);
+	        eventHandler.setEvent(event2);
+	        metadataDAO.updateEventHandler(eventHandler);
 
-        all = metadataDAO.getAllEventHandlers();
-        assertNotNull(all);
-        assertEquals(1, all.size());
+	        all = metadataDAO.getAllEventHandlers();
+	        assertNotNull(all);
+	        assertEquals(1, all.size());
 
-        byEvents = metadataDAO.getEventHandlersForEvent(event1, true);
-        assertNotNull(byEvents);
-        assertEquals(0, byEvents.size());
+	        byEvents = metadataDAO.getEventHandlersForEvent(event1, true);
+	        assertNotNull(byEvents);
+	        assertEquals(0, byEvents.size());
 
-        byEvents = metadataDAO.getEventHandlersForEvent(event2, true);
-        assertNotNull(byEvents);
-        assertEquals(1, byEvents.size());
-    }
-}
+	        byEvents = metadataDAO.getEventHandlersForEvent(event2, true);
+	        assertNotNull(byEvents);
+	        assertEquals(1, byEvents.size());
+	    }
+	}

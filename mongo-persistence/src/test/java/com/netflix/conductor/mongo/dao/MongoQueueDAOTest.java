@@ -16,8 +16,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -36,6 +39,8 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.testcontainers.containers.MongoDBContainer;
@@ -45,6 +50,7 @@ import com.google.common.collect.ImmutableList;
 import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
+import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
@@ -72,7 +78,7 @@ public class MongoQueueDAOTest {
     
     public MongoTemplate mongoTemplate;
     
-    @Before
+    @BeforeAll
     public void setup() {
     	
     	if(!MONGO_DB_CONTAINER.isRunning())
@@ -89,17 +95,17 @@ public class MongoQueueDAOTest {
         long offsetTimeInSecond = 0;
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg_" + i;
+            String messageId = "msg" + i;
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
         assertEquals(10, size);
         Map<String, Long> details = queueDAO.queuesDetail();
-        assertEquals(1, details.size() - 2);
+        assertEquals(1, details.size());
         assertEquals(10L, details.get(queueName).longValue());
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg_" + i;
+            String messageId = "msg" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
         }
 
@@ -108,7 +114,7 @@ public class MongoQueueDAOTest {
         assertEquals(10, popped.size());
 
         Map<String, Map<String, Map<String, Long>>> verbose = queueDAO.queuesDetailVerbose();
-        assertEquals(4, verbose.size());
+        assertEquals(1, verbose.size());
         long shardSize = verbose.get(queueName).get("a").get("size");
         long unackedSize = verbose.get(queueName).get("a").get("uacked");
         assertEquals(0, shardSize);
@@ -117,7 +123,7 @@ public class MongoQueueDAOTest {
         popped.forEach(messageId -> queueDAO.ack(queueName, messageId));
 
         verbose = queueDAO.queuesDetailVerbose();
-        assertEquals(4, verbose.size());
+        assertEquals(1, verbose.size());
         shardSize = verbose.get(queueName).get("a").get("size");
         unackedSize = verbose.get(queueName).get("a").get("uacked");
         assertEquals(0, shardSize);
@@ -186,7 +192,27 @@ public class MongoQueueDAOTest {
         List<Message> firstPoll = queueDAO.pollMessages(queueName, firstPollSize, 10_000);
         assertNotNull("First poll was null", firstPoll);
         assertFalse("First poll was empty", firstPoll.isEmpty());
-        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size() - 7);
+        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size());
+
+        final int secondPollSize = 4;
+        List<Message> secondPoll = queueDAO.pollMessages(queueName, secondPollSize, 10_000);
+        assertNotNull("Second poll was null", secondPoll);
+        assertFalse("Second poll was empty", secondPoll.isEmpty());
+        assertEquals("Second poll size mismatch", secondPollSize, secondPoll.size());
+
+        // Assert that the total queue size hasn't changed
+        assertEquals("Total queue size should have remained the same", totalSize, queueDAO.getSize(queueName));
+
+        // Assert that our un-popped messages match our expected size
+        final long expectedSize = totalSize - firstPollSize - secondPollSize;
+        try {
+        	Query unpoppedQuery = new Query().addCriteria(Criteria.where("queue_name").is(queueName).and("popped").is(false));
+        	long count = mongoTemplate.count(unpoppedQuery, QueueMessageDocument.class);
+            assertEquals("Remaining queue size mismatch", expectedSize, count);
+        }
+        catch(Exception ex) {
+        	fail(ex.getMessage());
+        }
     }
 
 
@@ -203,7 +229,7 @@ public class MongoQueueDAOTest {
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
-        assertEquals(10, size-10);
+        assertEquals(10, size);
 
         for (int i = 0; i < 10; i++) {
             String messageId = "msg" + i;
@@ -211,7 +237,7 @@ public class MongoQueueDAOTest {
             queueDAO.remove(queueName, messageId);
         }
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg_" + i;
+            String messageId = "msg" + i;
             assertFalse(queueDAO.containsMessage(queueName, messageId));
         }
     }
@@ -250,11 +276,11 @@ public class MongoQueueDAOTest {
         // Assert that all messages were persisted and no extras are in there
         assertEquals("Queue size mismatch", totalSize, queueDAO.getSize(queueName));
 
-        final int firstPollSize = 3;
+        final int firstPollSize = 4;
         List<Message> firstPoll = queueDAO.pollMessages(queueName, firstPollSize, 100);
         assertNotNull("First poll was null", firstPoll);
         assertFalse("First poll was empty", firstPoll.isEmpty());
-        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size() - 4);
+        assertEquals("First poll size mismatch", firstPollSize, firstPoll.size());
 
         List<String> firstPollMessageIds = messages.stream().map(Message::getId).collect(Collectors.toList())
             .subList(0, firstPollSize + 1);
@@ -264,7 +290,37 @@ public class MongoQueueDAOTest {
             assertTrue("Unexpected Id: " + actual, firstPollMessageIds.contains(actual));
         }
 
-        
+        final int secondPollSize = 3;
+
+        // Sleep a bit to get the next batch of messages
+        LOGGER.debug("Sleeping for second poll...");
+        Thread.sleep(5_000);
+
+        // Poll for many more messages than expected
+        List<Message> secondPoll = queueDAO.pollMessages(queueName, secondPollSize + 10, 100);
+        assertNotNull("Second poll was null", secondPoll);
+        assertFalse("Second poll was empty", secondPoll.isEmpty());
+        assertEquals("Second poll size mismatch", secondPollSize, secondPoll.size());
+
+        List<String> expectedIds = Arrays.asList("testmsg-4", "testmsg-6", "testmsg-7");
+        for (int i = 0; i < secondPollSize; i++) {
+            String actual = secondPoll.get(i).getId();
+            assertTrue("Unexpected Id: " + actual, expectedIds.contains(actual));
+        }
+
+        // Assert that the total queue size hasn't changed
+        assertEquals("Total queue size should have remained the same", totalSize, queueDAO.getSize(queueName));
+
+        // Assert that our un-popped messages match our expected size
+        final long expectedSize = totalSize - firstPollSize - secondPollSize;
+        try {
+        	Query unpoppedQuery = new Query().addCriteria(Criteria.where("queue_name").is(queueName).and("popped").is(false));
+        	long count = mongoTemplate.count(unpoppedQuery, QueueMessageDocument.class);
+            assertEquals("Remaining queue size mismatch", expectedSize, count);
+        }
+        catch(Exception ex) {
+        	fail(ex.getMessage());
+        }
     }
 
     @Test
@@ -321,7 +377,7 @@ public class MongoQueueDAOTest {
         // Should have one less un-acked popped message in the queue
         Long uacked = queueDAO.queuesDetailVerbose().get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals(uacked.longValue(), unackedCount);
+        assertEquals(uacked.longValue(), unackedCount - 1);
 
         unack.run();
 
@@ -329,7 +385,7 @@ public class MongoQueueDAOTest {
         Map<String, Map<String, Map<String, Long>>> details = queueDAO.queuesDetailVerbose();
         uacked = details.get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount+3);
+        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount - 1);
 
         Long otherUacked = details.get(otherQueueName).get("a").get("uacked");
         assertNotNull(otherUacked);
