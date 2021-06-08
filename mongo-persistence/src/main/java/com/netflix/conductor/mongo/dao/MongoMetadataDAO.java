@@ -545,7 +545,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
     	List<WorkflowDef> result = new ArrayList<WorkflowDef>();
     	
         Query query = new Query();
-        query.addCriteria(Criteria.where("version").elemMatch(Criteria.where("latest_version").exists(true)));
+        query.addCriteria(Criteria.where("version").elemMatch(Criteria.where("latest_version")));
         
         
         //query.fields().include("version").equals(query.fields().include("latest_version"));
