@@ -31,16 +31,17 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.ExecutionDAOTest;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
@@ -57,12 +58,20 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
     
-    @Autowired
-    public MongoTemplate mongoTemplate;
-    
-    @Before
-    public void setup() {
-    	
+    private static final MongoDBContainer MONGO_DB_CONTAINER =
+    		  new MongoDBContainer("mongo:3.6.23");
+  	
+  	  private static final String MONGO_INITDB_DATABASE = "conductor";
+  	  
+  	  public MongoTemplate mongoTemplate;
+  	  
+  	  @Before
+  	  public void setup() {
+  	  	
+  	  	if(!MONGO_DB_CONTAINER.isRunning())
+  				MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
+  			
+  	  	mongoTemplate = new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
     

@@ -16,10 +16,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,19 +36,17 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.MongoDBContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
-import com.netflix.conductor.mongo.config.MongoTestConfiguration;
-import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
+@ContextConfiguration(classes = {TestObjectMapperConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
@@ -69,13 +65,21 @@ public class MongoQueueDAOTest {
     @Rule
     public ExpectedException expected = ExpectedException.none();
 		
-    @Autowired
+    private static final MongoDBContainer MONGO_DB_CONTAINER =
+    		  new MongoDBContainer("mongo:3.6.23");
+  	
+    private static final String MONGO_INITDB_DATABASE = "conductor";
+    
     public MongoTemplate mongoTemplate;
     
     @Before
     public void setup() {
     	
-         queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
+    	if(!MONGO_DB_CONTAINER.isRunning())
+			MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
+		
+    	mongoTemplate = new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
+        queueDAO = new MongoQueueDAO(objectMapper, mongoTemplate);
          
     }
    
