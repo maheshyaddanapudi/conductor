@@ -81,7 +81,7 @@ public class MongoQueueDAOTest {
    
     @Test
     public void complexQueueTest() {
-        String queueName = "TestQueue_1";
+        String queueName = "TestQueue";
         long offsetTimeInSecond = 0;
 
         for (int i = 0; i < 10; i++) {
@@ -124,14 +124,14 @@ public class MongoQueueDAOTest {
         assertEquals(0, popped.size());
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg_" + i;
+            String messageId = "msg" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
         }
         size = queueDAO.getSize(queueName);
         assertEquals(10, size);
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg_" + i;
+            String messageId = "msg" + i;
             assertTrue(queueDAO.containsMessage(queueName, messageId));
             queueDAO.remove(queueName, messageId);
         }
@@ -140,7 +140,7 @@ public class MongoQueueDAOTest {
         assertEquals(0, size);
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg_" + i;
+            String messageId = "msg" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
         }
         queueDAO.flush(queueName);
@@ -191,23 +191,23 @@ public class MongoQueueDAOTest {
      */
     @Test
     public void containsMessageTest() {
-        String queueName = "TestQueue_2";
+        String queueName = "TestQueue";
         long offsetTimeInSecond = 0;
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg__" + i;
+            String messageId = "msg" + i;
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
         assertEquals(10, size);
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg__" + i;
+            String messageId = "msg" + i;
             assertTrue(queueDAO.containsMessage(queueName, messageId));
             queueDAO.remove(queueName, messageId);
         }
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg___" + i;
+            String messageId = "msg_" + i;
             assertFalse(queueDAO.containsMessage(queueName, messageId));
         }
     }
@@ -267,8 +267,8 @@ public class MongoQueueDAOTest {
     public void processUnacksTest() {
         processUnacks(() -> {
             // Process unacks
-            queueDAO.processUnacks("process_unacks_test_1");
-        }, "process_unacks_test_1");
+            queueDAO.processUnacks("process_unacks_test");
+        }, "process_unacks_test");
     }
 
     @Test
@@ -276,7 +276,7 @@ public class MongoQueueDAOTest {
         processUnacks(() -> {
             // Process all unacks
             queueDAO.processAllUnacks();
-        }, "process_unacks_test_2");
+        }, "process_unacks_test");
     }
 
     private void processUnacks(Runnable unack, String queueName) {
