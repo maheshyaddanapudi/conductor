@@ -103,13 +103,13 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             	Monitors.error(CLASS_NAME, "removeTaskDef");
                 String errorMsg = String.format("No such task definition: %s", name);
                 LOGGER.error(errorMsg);
-                throw new ApplicationException(Code.NOT_FOUND, errorMsg);
+                throw new ApplicationException(ApplicationException.Code.NOT_FOUND, "No such task definition");
             }
         } catch (Exception e) {
             Monitors.error(CLASS_NAME, "removeTaskDef");
             String errorMsg = String.format("No such task definition: %s", name);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.NOT_FOUND, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.NOT_FOUND, "No such task definition");
         }
         refreshTaskDefsCache();
     }
@@ -173,7 +173,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getLatestWorkflowDef");
             String errorMsg = String.format("Failed to get latest workflow def: %s", name);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
 
@@ -190,7 +190,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getWorkflowDef");
             String errorMsg = String.format("Failed to get workflow def: %s", name);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
 
@@ -204,7 +204,8 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             	Monitors.error(CLASS_NAME, "removeWorkflowDef");
             	String errorMsg = String.format("No such workflow definition: %s version: %d", name, version);
                 LOGGER.error(errorMsg);
-                throw new ApplicationException(Code.NOT_FOUND, errorMsg);
+                throw new ApplicationException(ApplicationException.Code.NOT_FOUND,
+                        String.format("No such workflow definition: %s version: %d", name, version));
             }
             else {
             	Optional<Integer> maxVersion = getLatestVersion(name);
@@ -214,7 +215,8 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "removeWorkflowDef");
             String errorMsg = String.format("No such workflow definition: %s version: %d", name, version);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.NOT_FOUND, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.NOT_FOUND,
+                    String.format("No such workflow definition: %s version: %d", name, version));
         }
     }
 
@@ -235,7 +237,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getAllWorkflowDefs");
             String errorMsg = String.format("Failed to get all workflow definition");
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
 
@@ -297,7 +299,8 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
         	Monitors.error(CLASS_NAME, "removeWorkflowDef");
         	String errorMsg = String.format("No such EventHandler: %s", name);
             LOGGER.error(errorMsg);
-            throw new ApplicationException(Code.NOT_FOUND, errorMsg);
+            throw new ApplicationException(ApplicationException.Code.NOT_FOUND,
+                    "EventHandler with name " + name + " not found!");
         }
     }
 
@@ -318,7 +321,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getAllEventHandlers");
             String errorMsg = "Failed to get all event handlers";
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
 
@@ -339,7 +342,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getEventHandlersForEvent");
             String errorMsg = String.format("Failed to get all event handlers for event: %s", event);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
 	
@@ -373,7 +376,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "insertOrUpdateTaskDef");
             String errorMsg = String.format("Error creating/updating task definition: %s", taskDef.getName());
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
         
         return taskDef.getName();
@@ -403,7 +406,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getTaskDef");
             String errorMsg = String.format("Failed to get task def: %s", name);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
     
@@ -423,7 +426,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             Monitors.error(CLASS_NAME, "getAllTaskDefs");
             String errorMsg = "Failed to get all task defs";
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, errorMsg, e);
         }
     }
 
