@@ -104,7 +104,7 @@ public class MongoQueueDAOTest {
         assertEquals(10, popped.size());
 
         Map<String, Map<String, Map<String, Long>>> verbose = queueDAO.queuesDetailVerbose();
-        assertEquals(5, verbose.size());
+        assertEquals(4, verbose.size());
         long shardSize = verbose.get(queueName).get("a").get("size");
         long unackedSize = verbose.get(queueName).get("a").get("uacked");
         assertEquals(0, shardSize);
@@ -113,7 +113,7 @@ public class MongoQueueDAOTest {
         popped.forEach(messageId -> queueDAO.ack(queueName, messageId));
 
         verbose = queueDAO.queuesDetailVerbose();
-        assertEquals(5, verbose.size());
+        assertEquals(4, verbose.size());
         shardSize = verbose.get(queueName).get("a").get("size");
         unackedSize = verbose.get(queueName).get("a").get("uacked");
         assertEquals(0, shardSize);
@@ -325,7 +325,7 @@ public class MongoQueueDAOTest {
         Map<String, Map<String, Map<String, Long>>> details = queueDAO.queuesDetailVerbose();
         uacked = details.get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount);
+        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount+3);
 
         Long otherUacked = details.get(otherQueueName).get("a").get("uacked");
         assertNotNull(otherUacked);
