@@ -81,11 +81,11 @@ public class MongoQueueDAOTest {
    
     @Test
     public void complexQueueTest() {
-        String queueName = "TestQueue";
+        String queueName = "TestQueue_1";
         long offsetTimeInSecond = 0;
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg_" + i;
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
@@ -95,7 +95,7 @@ public class MongoQueueDAOTest {
         assertEquals(10L, details.get(queueName).longValue());
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg_" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
         }
 
@@ -124,14 +124,14 @@ public class MongoQueueDAOTest {
         assertEquals(0, popped.size());
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg_" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
         }
         size = queueDAO.getSize(queueName);
         assertEquals(10, size);
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg_" + i;
             assertTrue(queueDAO.containsMessage(queueName, messageId));
             queueDAO.remove(queueName, messageId);
         }
@@ -140,7 +140,7 @@ public class MongoQueueDAOTest {
         assertEquals(0, size);
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg_" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
         }
         queueDAO.flush(queueName);
@@ -156,12 +156,12 @@ public class MongoQueueDAOTest {
     @Test
     public void pollMessagesTest() {
         final List<Message> messages = new ArrayList<>();
-        final String queueName = "issue399_testQueue";
+        final String queueName = "issue399_testQueue_1";
         final int totalSize = 10;
 
         for (int i = 0; i < totalSize; i++) {
             String payload = "{\"id\": " + i + ", \"msg\":\"test " + i + "\"}";
-            Message m = new Message("testmsg-" + i, payload, "");
+            Message m = new Message("testmsg--" + i, payload, "");
             if (i % 2 == 0) {
                 // Set priority on message with pair id
                 m.setPriority(99 - i);
@@ -214,23 +214,23 @@ public class MongoQueueDAOTest {
      */
     @Test
     public void containsMessageTest() {
-        String queueName = "TestQueue";
+        String queueName = "TestQueue_2";
         long offsetTimeInSecond = 0;
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg__" + i;
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
         assertEquals(10, size);
 
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg__" + i;
             assertTrue(queueDAO.containsMessage(queueName, messageId));
             queueDAO.remove(queueName, messageId);
         }
         for (int i = 0; i < 10; i++) {
-            String messageId = "msg" + i;
+            String messageId = "msg__" + i;
             assertFalse(queueDAO.containsMessage(queueName, messageId));
         }
     }
@@ -243,7 +243,7 @@ public class MongoQueueDAOTest {
     @Test
     public void pollDeferredMessagesTest() throws InterruptedException {
         final List<Message> messages = new ArrayList<>();
-        final String queueName = "issue448_testQueue";
+        final String queueName = "issue448_testQueue_1";
         final int totalSize = 10;
 
         for (int i = 0; i < totalSize; i++) {
@@ -261,15 +261,15 @@ public class MongoQueueDAOTest {
             }
 
             String payload = "{\"id\": " + i + ",\"offset_time_seconds\":" + offset + "}";
-            Message m = new Message("testmsg-" + i, payload, "");
+            Message m = new Message("testmsg---" + i, payload, "");
             messages.add(m);
-            queueDAO.push(queueName, "testmsg-" + i, offset);
+            queueDAO.push(queueName, "testmsg---" + i, offset);
         }
 
         // Assert that all messages were persisted and no extras are in there
         assertEquals("Queue size mismatch", totalSize, queueDAO.getSize(queueName));
 
-        final int firstPollSize = 4;
+        final int firstPollSize = 3;
         List<Message> firstPoll = queueDAO.pollMessages(queueName, firstPollSize, 100);
         assertNotNull("First poll was null", firstPoll);
         assertFalse("First poll was empty", firstPoll.isEmpty());
@@ -295,7 +295,7 @@ public class MongoQueueDAOTest {
         assertFalse("Second poll was empty", secondPoll.isEmpty());
         assertEquals("Second poll size mismatch", secondPollSize, secondPoll.size());
 
-        List<String> expectedIds = Arrays.asList("testmsg-4", "testmsg-6", "testmsg-7");
+        List<String> expectedIds = Arrays.asList("testmsg---4", "testmsg---6", "testmsg---7");
         for (int i = 0; i < secondPollSize; i++) {
             String actual = secondPoll.get(i).getId();
             assertTrue("Unexpected Id: " + actual, expectedIds.contains(actual));
@@ -322,8 +322,8 @@ public class MongoQueueDAOTest {
     public void processUnacksTest() {
         processUnacks(() -> {
             // Process unacks
-            queueDAO.processUnacks("process_unacks_test");
-        }, "process_unacks_test");
+            queueDAO.processUnacks("process_unacks_test_1");
+        }, "process_unacks_test_1");
     }
 
     @Test
@@ -331,7 +331,7 @@ public class MongoQueueDAOTest {
         processUnacks(() -> {
             // Process all unacks
             queueDAO.processAllUnacks();
-        }, "process_unacks_test");
+        }, "process_unacks_test_2");
     }
 
     private void processUnacks(Runnable unack, String queueName) {
