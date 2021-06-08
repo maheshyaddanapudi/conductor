@@ -50,7 +50,8 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	public MongoTemplate mongoTemplate;
 	
 	public MongoQueueDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
-		super(objectMapper, mongoTemplate);
+		super(objectMapper);
+		this.mongoTemplate = mongoTemplate;
 	
 		Executors.newSingleThreadScheduledExecutor()
         .scheduleAtFixedRate(this::processAllUnacks,
@@ -314,13 +315,15 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
     	
     	List<Message> results = new ArrayList<>();
     	
-    	mongoTemplate.find(query, QueueMessageDocument.class).forEach(qmd -> {
-    		Message m = new Message();
-            m.setId(qmd.getMessageId());
-            m.setPriority(qmd.getPriority());
-            m.setPayload(qmd.getPayload());
-            results.add(m);
-    	});
+    	List<QueueMessageDocument> aQueueMessageDocumentList = mongoTemplate.find(query, QueueMessageDocument.class);
+    	if(!aQueueMessageDocumentList.isEmpty())
+    		aQueueMessageDocumentList.forEach(qmd -> {
+        		Message m = new Message();
+                m.setId(qmd.getMessageId());
+                m.setPriority(qmd.getPriority());
+                m.setPayload(qmd.getPayload());
+                results.add(m);
+        	});
     	
         return results;
     }

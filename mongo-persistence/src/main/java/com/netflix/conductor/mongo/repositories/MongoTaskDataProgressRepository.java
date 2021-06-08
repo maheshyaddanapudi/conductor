@@ -17,11 +17,10 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.netflix.conductor.mongo.entities.MetaEventHandlerDocument;
-
+import com.netflix.conductor.mongo.entities.TaskDataDocument;
 
 @Repository
 @Transactional
-public interface MongoMetaEventHandlerRepository extends MongoRepository<MetaEventHandlerDocument, String> {
-	
+public interface MongoTaskDataProgressRepository extends MongoRepository<TaskDataDocument, String> {
+
 }

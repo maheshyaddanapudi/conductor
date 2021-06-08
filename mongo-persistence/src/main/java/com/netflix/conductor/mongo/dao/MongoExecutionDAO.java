@@ -61,7 +61,8 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	public MongoTemplate mongoTemplate;
 	
 	public MongoExecutionDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
-		super(objectMapper, mongoTemplate);
+		super(objectMapper);
+		this.mongoTemplate = mongoTemplate;
 	}
 	
 	private static String dateStr(Long timeInMs) {
@@ -259,30 +260,24 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         
         try {
         	 if(!taskIds.isEmpty()) {
-        		 
-        		 if(!taskIds.isEmpty()) {
-        				Query orQuery = new Query();
-        				 Criteria orCriteria = new Criteria();
-        				 List<Criteria> orExpression =  new ArrayList<>();
-
-        			   Criteria expression = new Criteria();
-        			   taskIds.forEach((value) -> expression.and("task_id").is(value));
-        			   orExpression.add(expression);
-        				 
-        				 
-        				 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
-        				
-        				 List<TaskDataDocument> taskDataList = mongoTemplate.find(orQuery, TaskDataDocument.class);
-        				 
-        				 if(taskDataList.isEmpty())
-        	                 	return result;
-        	                 else
-        	                 	taskDataList.forEach(taskDoc -> {
-        	                 		if(taskDoc.getJson_data()!=null)
-        	                 			result.add(readValue(taskDoc.getJson_data(), Task.class));
-        	                 	});
-        			}
-             }
+        		 Query orQuery = new Query();
+        		 Criteria orCriteria = new Criteria();
+        		 List<Criteria> orExpression =  new ArrayList<>();
+        		 for (String taskId : taskIds) {
+        		   Criteria expression = Criteria.where("task_id").is(taskId);
+        		   orExpression.add(expression);
+        		 }
+        		 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
+        		 List<TaskDataDocument> taskDataList = mongoTemplate.find(orQuery, TaskDataDocument.class);
+				 
+				 if(taskDataList.isEmpty())
+	                 	return result;
+	                 else
+	                 	taskDataList.forEach(taskDoc -> {
+	                 		if(taskDoc.getJson_data()!=null)
+	                 			result.add(readValue(taskDoc.getJson_data(), Task.class));
+	                 	});
+        	 }
         }
         catch(Exception e) {
         	e.printStackTrace();
@@ -457,21 +452,25 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         
 		List<TaskInProgressDocument> inProgress = mongoTemplate.find(searchQuery, TaskInProgressDocument.class);
 		
-		if(!inProgress.isEmpty()) {
-			Query orQuery = new Query();
-			 Criteria orCriteria = new Criteria();
-			 List<Criteria> orExpression =  new ArrayList<>();
-
-		   Criteria expression = new Criteria();
-		   inProgress.forEach((value) -> expression.and("task_id").is(value));
-		   orExpression.add(expression);
-			 
-			 
-			 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
-			
-			mongoTemplate.find(orQuery, TaskDataDocument.class).forEach(tdd -> {
-				result.add(readValue(tdd.getJson_data(), Task.class));
-			});
+		if(!inProgress.isEmpty())
+		{
+			 Query orQuery = new Query();
+	   		 Criteria orCriteria = new Criteria();
+	   		 List<Criteria> orExpression =  new ArrayList<>();
+	   		 for (TaskInProgressDocument aTaskInProgressDocument : inProgress) {
+	   		   Criteria expression = Criteria.where("task_id").is(aTaskInProgressDocument.getTask_id());
+	   		   orExpression.add(expression);
+	   		 }
+	   		 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
+	   		 List<TaskDataDocument> taskDataList = mongoTemplate.find(orQuery, TaskDataDocument.class);
+				 
+			 if(taskDataList.isEmpty())
+                	return result;
+                else
+                	taskDataList.forEach(taskDoc -> {
+                		if(taskDoc.getJson_data()!=null)
+                			result.add(readValue(taskDoc.getJson_data(), Task.class));
+                	});
 		}
 		
     	return result;
@@ -490,20 +489,18 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		List<WorkflowDefToWorkflowDocument> inProgress = mongoTemplate.find(searchQuery, WorkflowDefToWorkflowDocument.class);
 		
 		if(!inProgress.isEmpty()) {
-			Query orQuery = new Query();
-			 Criteria orCriteria = new Criteria();
-			 List<Criteria> orExpression =  new ArrayList<>();
 
-		   Criteria expression = new Criteria();
-		   inProgress.forEach((value) -> expression.and("workflow_id").is(value).and("correlation_id").is(correlationId));
-		   orExpression.add(expression);
-			 
-			 
-			 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
-			
-			 mongoTemplate.find(orQuery, WorkflowDocument.class).forEach(wd -> {
-					result.add(readValue(wd.getJson_data(), Workflow.class));
-				});
+			 Query orQuery = new Query();
+	   		 Criteria orCriteria = new Criteria();
+	   		 List<Criteria> orExpression =  new ArrayList<>();
+	   		 for (WorkflowDefToWorkflowDocument aWorkflowDefToWorkflowDocument : inProgress) {
+	   		   Criteria expression = Criteria.where("workflow_id").is(aWorkflowDefToWorkflowDocument.getWorkflow_id()).and("correlation_id").is(correlationId);
+	   		   orExpression.add(expression);
+	   		 }
+	   		 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
+	   		 mongoTemplate.find(orQuery, WorkflowDocument.class).forEach(wd -> {
+				result.add(readValue(wd.getJson_data(), Workflow.class));
+			 });
 		}
 		
     	return result;

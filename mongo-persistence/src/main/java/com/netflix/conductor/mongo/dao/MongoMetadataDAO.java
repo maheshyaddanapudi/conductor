@@ -53,7 +53,8 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public MongoTemplate mongoTemplate;
 		
 	 public MongoMetadataDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
-			super(objectMapper, mongoTemplate);
+			super(objectMapper);
+			this.mongoTemplate = mongoTemplate;
 		}
 	 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MongoMetadataDAO.class);
