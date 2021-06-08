@@ -20,12 +20,10 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.domain.Sort.Order;
@@ -43,19 +41,11 @@ import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.mongo.entities.QueueDocument;
 import com.netflix.conductor.mongo.entities.QueueMessageDocument;
-import com.netflix.conductor.mongo.repositories.MongoQueueMessageRepository;
-import com.netflix.conductor.mongo.repositories.MongoQueueRepository;
 
 @Trace
 public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	
 	private static final Long UNACK_SCHEDULE_MS = 60_000L;
-	
-	@Autowired
-	MongoQueueRepository mongoQueueRepository;
-	
-	@Autowired
-	MongoQueueMessageRepository mongoQueueMessageRepository;
 	
 	public MongoTemplate mongoTemplate;
 	
@@ -127,7 +117,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 
 	@Override
 	public int getSize(String queueName) {
-		return mongoQueueMessageRepository.findAll().size();
+		return ((Long)mongoTemplate.count(new Query().addCriteria(Criteria.where("queue_name").is(queueName)), QueueMessageDocument.class)).intValue();
 	}
 
 	@Override
@@ -151,7 +141,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 
 	@Override
 	public void flush(String queueName) {
-		mongoQueueMessageRepository.deleteAllByQueueName(queueName);
+		mongoTemplate.remove(new Query().addCriteria(Criteria.where("queue_name").is(queueName)), QueueMessageDocument.class);
 	}
 
 	@Override
@@ -202,14 +192,14 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 
 	@Override
 	public boolean resetOffsetTime(String queueName, String messageId) {
-		Optional<QueueMessageDocument> qmd = mongoQueueMessageRepository.findByQueueNameAndMessageId(queueName, messageId);
-		if(qmd.isEmpty())
+		QueueMessageDocument aQueueMessageDocument = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("queue_name").is(queueName).and("message_id").is(messageId)), QueueMessageDocument.class);
+		if(null==aQueueMessageDocument)
 			return false;
 		else
 		{
-			qmd.get().setOffsetTimeSeconds(0);
-			qmd.get().setDeliverOn(getOffsetAddedDate(0));
-			return mongoQueueMessageRepository.save(qmd.get())!=null;
+			aQueueMessageDocument.setOffsetTimeSeconds(0);
+			aQueueMessageDocument.setDeliverOn(getOffsetAddedDate(0));
+			return mongoTemplate.save(aQueueMessageDocument)!=null;
 		}
 	}
 	
@@ -218,16 +208,16 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	        long offsetTimeInSecond) {
 
 	        createQueueIfNotExists(queueName);
+	        
+	        QueueMessageDocument aQueueMessageDocument = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("queue_name").is(queueName).and("message_id").is(messageId)), QueueMessageDocument.class);
 
-	        Optional<QueueMessageDocument> queueMessageDocument = mongoQueueMessageRepository.findByQueueNameAndMessageId(queueName, messageId);
-
-	        if(queueMessageDocument.isPresent())
+	        if(null!=aQueueMessageDocument)
 	        {
-	        	queueMessageDocument.get().setPriority(priority);
-	        	queueMessageDocument.get().setOffsetTimeSeconds(offsetTimeInSecond);
-	        	queueMessageDocument.get().setDeliverOn(getOffsetAddedDate(((Long)offsetTimeInSecond).intValue()));
-	        	queueMessageDocument.get().setPopped(false);
-	        	mongoQueueMessageRepository.save(queueMessageDocument.get());
+	        	aQueueMessageDocument.setPriority(priority);
+	        	aQueueMessageDocument.setOffsetTimeSeconds(offsetTimeInSecond);
+	        	aQueueMessageDocument.setDeliverOn(getOffsetAddedDate(((Long)offsetTimeInSecond).intValue()));
+	        	aQueueMessageDocument.setPopped(false);
+	        	mongoTemplate.save(aQueueMessageDocument);
 	        }
 	        else {
 	        	QueueMessageDocument newQueueMessageDocument = new QueueMessageDocument();
@@ -238,7 +228,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	        	newQueueMessageDocument.setDeliverOn(getOffsetAddedDate(((Long)offsetTimeInSecond).intValue()));
 	        	newQueueMessageDocument.setPopped(false);
 	        	newQueueMessageDocument.setPayload(payload);
-	        	newQueueMessageDocument = mongoQueueMessageRepository.save(newQueueMessageDocument);
+	        	newQueueMessageDocument = mongoTemplate.save(newQueueMessageDocument);
 	        }
 	    }
 	
@@ -253,7 +243,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	        if (!exists) {
 	        	QueueDocument newQueueDocument = new QueueDocument();
 	        	newQueueDocument.setQueueName(queueName);
-	        	newQueueDocument = mongoQueueRepository.save(newQueueDocument);
+	        	newQueueDocument = mongoTemplate.save(newQueueDocument);
 	        }
 	    }
 	
@@ -272,7 +262,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	
     private boolean existsMessage(String queueName, String messageId) {
         
-        return mongoQueueMessageRepository.findByQueueNameAndMessageId(queueName, messageId).isPresent();
+        return mongoTemplate.exists(new Query().addCriteria(Criteria.where("queue_name").is(queueName).and("message_id").is(messageId)), QueueMessageDocument.class);
     }
 
     private List<Message> popMessages(String queueName, int count, int timeout) {
@@ -336,11 +326,11 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
     }
     
     private boolean removeMessage(String queueName, String messageId) {
-        Optional<QueueMessageDocument> queueMessageDocument = mongoQueueMessageRepository.findByQueueNameAndMessageId(queueName, messageId);
+    	QueueMessageDocument queueMessageDocument =mongoTemplate.findOne(new Query().addCriteria(Criteria.where("queue_name").is(queueName).and("message_id").is(messageId)), QueueMessageDocument.class);
         
-        if(queueMessageDocument.isPresent())
+        if(null!=queueMessageDocument)
         {
-        	mongoQueueMessageRepository.delete(queueMessageDocument.get());
+        	mongoTemplate.remove(queueMessageDocument);
         	return true;
         }
         return false;

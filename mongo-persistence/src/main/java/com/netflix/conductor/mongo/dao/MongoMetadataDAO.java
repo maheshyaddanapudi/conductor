@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -47,9 +46,6 @@ import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.mongo.entities.MetaEventHandlerDocument;
 import com.netflix.conductor.mongo.entities.MetaTaskDefDocument;
 import com.netflix.conductor.mongo.entities.MetaWorkflowDefDocument;
-import com.netflix.conductor.mongo.repositories.MongoMetaEventHandlerRepository;
-import com.netflix.conductor.mongo.repositories.MongoMetadataTaskRepository;
-import com.netflix.conductor.mongo.repositories.MongoMetadataWorkflowRepository;
 
 @Trace
 public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, EventHandlerDAO {
@@ -66,16 +62,6 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
     
     private Map<String, TaskDef> taskDefCache = new HashMap<>();
     
-    @Autowired
-	MongoMetadataTaskRepository mongoMetadataTaskRepository;
-    
-    @Autowired
-	MongoMetadataWorkflowRepository mongoMetadataWorkflowRepository;
-    
-    @Autowired
-    MongoMetaEventHandlerRepository mongoMetaEventHandlerRepository;
-    
-
 	@Override
 	public void createTaskDef(TaskDef taskDef) {
 		recordMongoDaoRequests("createTaskDef");
@@ -110,7 +96,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public void removeTaskDef(String name) {
         try {
             recordMongoDaoRequests("removeTaskDef");
-            mongoMetadataTaskRepository.deleteByName(name);
+            mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaTaskDefDocument.class);
         } catch (Exception e) {
             Monitors.error(CLASS_NAME, "removeTaskDef");
             String errorMsg = String.format("Failed to remove task definition: %s", name);
@@ -204,7 +190,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public void removeWorkflowDef(String name, Integer version) {
         try {
             recordMongoDaoRequests("removeWorkflowDef");
-            mongoMetadataWorkflowRepository.deleteByNameAndVersion(name, version);
+            mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name).and("version").is(version)), MetaWorkflowDefDocument.class);
             Optional<Integer> maxVersion = getLatestVersion(name);
             maxVersion.ifPresent(newVersion -> updateLatestVersion(name, newVersion));
         } catch (Exception e) {
@@ -220,7 +206,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public List<WorkflowDef> getAllWorkflowDefs() {
         try {
             recordMongoDaoRequests("getAllWorkflowDefs");
-            List<MetaWorkflowDefDocument> metaWorkflowDefDocuments = mongoMetadataWorkflowRepository.findAll();
+            List<MetaWorkflowDefDocument> metaWorkflowDefDocuments = mongoTemplate.findAll(MetaWorkflowDefDocument.class);
             if (metaWorkflowDefDocuments.size() == 0) {
                 LOGGER.warn("No workflow definitions were found.");
                 return Collections.EMPTY_LIST;
@@ -253,7 +239,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
         newMetaEventHandlerDocument.setActive(eventHandler.isActive());
         newMetaEventHandlerDocument.setJson_data(toJson(eventHandler));
         
-        mongoMetaEventHandlerRepository.save(newMetaEventHandlerDocument);
+        mongoTemplate.save(newMetaEventHandlerDocument);
     }
 
 	@Override
@@ -287,7 +273,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
                 "EventHandler with name " + name + " doesn't exists!");
         }
 
-        mongoMetaEventHandlerRepository.deleteByName(name);
+        mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaEventHandlerDocument.class);
     }
 
 	@SuppressWarnings("unchecked")
@@ -295,7 +281,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public List<EventHandler> getAllEventHandlers() {
 		recordMongoDaoRequests("getAllEventHandlers");
         try {
-            List<MetaEventHandlerDocument> metaEventHandlerDocuments = mongoMetaEventHandlerRepository.findAll();
+            List<MetaEventHandlerDocument> metaEventHandlerDocuments = mongoTemplate.findAll(MetaEventHandlerDocument.class);
         	if (metaEventHandlerDocuments.size() == 0) {
                 LOGGER.debug("No Event Handlers were found.");
                 return Collections.EMPTY_LIST;
@@ -316,7 +302,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	public List<EventHandler> getEventHandlersForEvent(String event, boolean activeOnly) {
 		recordMongoDaoRequests("getEventHandlersForEvent");
         try {
-            List<MetaEventHandlerDocument> metaEventHandlerDocuments = !activeOnly ? mongoMetaEventHandlerRepository.findAllByEvent(event) : mongoMetaEventHandlerRepository.findAllByEventAndActive(event, activeOnly);
+        	List<MetaEventHandlerDocument> metaEventHandlerDocuments = !activeOnly ? mongoTemplate.find(new Query().addCriteria(Criteria.where("event").is(event)), MetaEventHandlerDocument.class) : mongoTemplate.find(new Query().addCriteria(Criteria.where("event").is(event).and("active").is(activeOnly)), MetaEventHandlerDocument.class);
         	if (metaEventHandlerDocuments.size() == 0) {
                 LOGGER.info("No Event Handlers were found.");
                 return Collections.EMPTY_LIST;
@@ -354,7 +340,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             	MetaTaskDefDocument taskDefDocument = new MetaTaskDefDocument();
             	taskDefDocument.setName(taskDef.getName());
                 taskDefDocument.setJson_data(taskDefinition);
-                taskDefDocument = mongoMetadataTaskRepository.save(taskDefDocument);
+                taskDefDocument = mongoTemplate.save(taskDefDocument);
             }
             
             taskDefCache.put(taskDef.getName(), taskDef);
@@ -400,7 +386,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
 	private List<TaskDef> getAllTaskDefsFromDB() {
     	recordMongoDaoRequests("getAllTaskDefsFromDB");
         try {
-            List<MetaTaskDefDocument> metaTaskDefDocuments = mongoMetadataTaskRepository.findAll();
+            List<MetaTaskDefDocument> metaTaskDefDocuments = mongoTemplate.findAll(MetaTaskDefDocument.class);
         	if (metaTaskDefDocuments.isEmpty()) {
                 LOGGER.info("No task definitions were found.");
                 return Collections.EMPTY_LIST;
@@ -451,9 +437,9 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
      */
     private Boolean workflowExists(WorkflowDef def) {
     	recordMongoDaoRequests("workflowExists");
-    	Optional<MetaWorkflowDefDocument> metaWorkflowDefDocument = mongoMetadataWorkflowRepository.findByNameAndVersion(def.getName(), def.getVersion());
+    	MetaWorkflowDefDocument aMetaWorkflowDefDocument = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("name").is(def.getName()).and("version").is(def.getVersion())), MetaWorkflowDefDocument.class);
     	
-    	return metaWorkflowDefDocument.isPresent();
+    	return null!=aMetaWorkflowDefDocument;
     }
 
     /**
@@ -465,8 +451,8 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
      */
     private Optional<Integer> getLatestVersion(String name) {
     	recordMongoDaoRequests("getLatestVersion");
-        Optional<MetaWorkflowDefDocument> metaWorkflowDefDocument = mongoMetadataWorkflowRepository.findFirstByNameOrderByVersionDesc(name);
-        return Optional.ofNullable(metaWorkflowDefDocument.isPresent() ? metaWorkflowDefDocument.get().getVersion() : null);
+    	MetaWorkflowDefDocument aMetaWorkflowDefDocument = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("name").is(name)).with(Sort.by(Direction.DESC, "version")), MetaWorkflowDefDocument.class);
+        return Optional.ofNullable(null!=aMetaWorkflowDefDocument ? aMetaWorkflowDefDocument.getVersion() : null);
     }
 
     /**
@@ -501,7 +487,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             metaWorkFlowDefDocument.setName(def.getName());
             metaWorkFlowDefDocument.setVersion(def.getVersion());
             
-            mongoMetadataWorkflowRepository.save(metaWorkFlowDefDocument);
+            mongoTemplate.save(metaWorkFlowDefDocument);
             
         } else {
         	

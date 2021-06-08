@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.domain.Sort.Order;
@@ -55,42 +54,10 @@ import com.netflix.conductor.mongo.entities.WorkflowDefToWorkflowDocument;
 import com.netflix.conductor.mongo.entities.WorkflowDocument;
 import com.netflix.conductor.mongo.entities.WorkflowPendingDocument;
 import com.netflix.conductor.mongo.entities.WorkflowToTaskDocument;
-import com.netflix.conductor.mongo.repositories.MongoEventExecutionRepository;
-import com.netflix.conductor.mongo.repositories.MongoPollDataRepository;
-import com.netflix.conductor.mongo.repositories.MongoTaskInProgressRepository;
-import com.netflix.conductor.mongo.repositories.MongoTaskScheduledRepository;
-import com.netflix.conductor.mongo.repositories.MongoWorkflowDefToWorkflowRepository;
-import com.netflix.conductor.mongo.repositories.MongoWorkflowPendingRepository;
-import com.netflix.conductor.mongo.repositories.MongoWorkflowRepository;
-import com.netflix.conductor.mongo.repositories.MongoWorkflowToTaskRepository;
 
 @Trace
 public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, RateLimitingDAO, PollDataDAO {
 	
-	@Autowired
-	MongoTaskScheduledRepository mongoTaskScheduledRepository;
-	
-	@Autowired
-	MongoWorkflowToTaskRepository mongoWorkflowToTaskRepository;
-	
-	@Autowired
-	MongoTaskInProgressRepository mongoTaskInProgressRepository;
-	
-	@Autowired
-	MongoWorkflowRepository mongoWorkflowRepository;  
-	
-	@Autowired
-	MongoWorkflowDefToWorkflowRepository workflowDefToWorkflowRepository;
-	
-	@Autowired
-	MongoWorkflowPendingRepository mongoWorkflowPendingRepository;
-	
-	@Autowired
-	MongoEventExecutionRepository mongoEventExecutionRepository;
-	
-	@Autowired
-	MongoPollDataRepository mongoPollDataRepository;
-
 	public MongoTemplate mongoTemplate;
 	
 	public MongoExecutionDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
@@ -110,7 +77,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	@Override
 	public List<Task> getPendingTasksByWorkflow(String taskName, String workflowId) {
 		
-		List<Task> result = new ArrayList<Task>();
+		List<Task> result = new ArrayList<Task>(); 
 		
 		Query searchQuery = new Query();
 		searchQuery.addCriteria(Criteria.where("task_name").is(taskName).andOperator(Criteria.where("workflow_id").is(workflowId)));
@@ -118,17 +85,20 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		List<TaskInProgressDocument> inProgress = mongoTemplate.find(searchQuery, TaskInProgressDocument.class);
 		
 		if(!inProgress.isEmpty()) {
-			Criteria mainCriteria = Criteria.where("task_id").is(inProgress.get(0).getTask_id());
+			Query orQuery = new Query();
+			 Criteria orCriteria = new Criteria();
+			 List<Criteria> orExpression =  new ArrayList<>();
+
+		   Criteria expression = new Criteria();
+		   inProgress.forEach((value) -> expression.and("task_id").is(value));
+		   orExpression.add(expression);
+			 
+			 
+			 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
 			
-			int total = inProgress.size();
-			
-			for(int counter = 1; counter < total ; counter++) {
-				mainCriteria.orOperator(Criteria.where("task_id").is(inProgress.get(counter).getTask_id()));
-			}
-			
-			mongoTemplate.find(new Query().addCriteria(mainCriteria), TaskDataDocument.class).forEach(tdd -> {
+			mongoTemplate.find(orQuery, TaskDataDocument.class).forEach(tdd -> {
 				result.add(readValue(tdd.getJson_data(), Task.class));
-			});;
+			});
 		}
 		
     	return result;
@@ -284,31 +254,34 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 
 	@Override
 	public List<Task> getTasks(List<String> taskIds) {
-		Query searchQuery = new Query();
 		
 		List<Task> result = new ArrayList<Task>();
         
         try {
         	 if(!taskIds.isEmpty()) {
-        		 Criteria mainCriteria = new Criteria();
         		 
-        		 for(int taskCounter = 0; taskCounter<taskIds.size() ; taskCounter++) {
-        			 mainCriteria.orOperator(Criteria.where("task_id").is(taskIds.get(taskCounter)));
-        		 }
-        		 
-        		 searchQuery.addCriteria(mainCriteria);
-        		 
-        		 
-        		 List<TaskDataDocument> taskDataList = mongoTemplate.find(searchQuery, TaskDataDocument.class);
-             	 
-             	 
-                 if(taskDataList.isEmpty())
-                 	return result;
-                 else
-                 	taskDataList.forEach(taskDoc -> {
-                 		if(taskDoc.getJson_data()!=null)
-                 			result.add(readValue(taskDoc.getJson_data(), Task.class));
-                 	});
+        		 if(!taskIds.isEmpty()) {
+        				Query orQuery = new Query();
+        				 Criteria orCriteria = new Criteria();
+        				 List<Criteria> orExpression =  new ArrayList<>();
+
+        			   Criteria expression = new Criteria();
+        			   taskIds.forEach((value) -> expression.and("task_id").is(value));
+        			   orExpression.add(expression);
+        				 
+        				 
+        				 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
+        				
+        				 List<TaskDataDocument> taskDataList = mongoTemplate.find(orQuery, TaskDataDocument.class);
+        				 
+        				 if(taskDataList.isEmpty())
+        	                 	return result;
+        	                 else
+        	                 	taskDataList.forEach(taskDoc -> {
+        	                 		if(taskDoc.getJson_data()!=null)
+        	                 			result.add(readValue(taskDoc.getJson_data(), Task.class));
+        	                 	});
+        			}
              }
         }
         catch(Exception e) {
@@ -485,17 +458,20 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		List<TaskInProgressDocument> inProgress = mongoTemplate.find(searchQuery, TaskInProgressDocument.class);
 		
 		if(!inProgress.isEmpty()) {
-			Criteria mainCriteria = new Criteria();
-   		 
-   		 	int total = inProgress.size();
+			Query orQuery = new Query();
+			 Criteria orCriteria = new Criteria();
+			 List<Criteria> orExpression =  new ArrayList<>();
+
+		   Criteria expression = new Criteria();
+		   inProgress.forEach((value) -> expression.and("task_id").is(value));
+		   orExpression.add(expression);
+			 
+			 
+			 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
 			
-			for(int counter = 0; counter < total ; counter++) {
-				mainCriteria.orOperator(Criteria.where("task_id").is(inProgress.get(counter).getTask_id()));
-			}
-			
-			mongoTemplate.find(new Query().addCriteria(mainCriteria), TaskDataDocument.class).forEach(tdd -> {
+			mongoTemplate.find(orQuery, TaskDataDocument.class).forEach(tdd -> {
 				result.add(readValue(tdd.getJson_data(), Task.class));
-			});;
+			});
 		}
 		
     	return result;
@@ -514,18 +490,20 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		List<WorkflowDefToWorkflowDocument> inProgress = mongoTemplate.find(searchQuery, WorkflowDefToWorkflowDocument.class);
 		
 		if(!inProgress.isEmpty()) {
+			Query orQuery = new Query();
+			 Criteria orCriteria = new Criteria();
+			 List<Criteria> orExpression =  new ArrayList<>();
+
+		   Criteria expression = new Criteria();
+		   inProgress.forEach((value) -> expression.and("workflow_id").is(value).and("correlation_id").is(correlationId));
+		   orExpression.add(expression);
+			 
+			 
+			 orQuery.addCriteria(orCriteria.orOperator(orExpression.toArray(new Criteria[orExpression.size()])));
 			
-			Criteria mainCriteria = new Criteria();
-			
-			int total = inProgress.size();
-			
-			for(int counter = 0; counter < total ; counter++) {
-				mainCriteria.orOperator(Criteria.where("workflow_id").is(inProgress.get(counter).getWorkflow_id()).and("correlation_id").is(correlationId));
-			}
-			
-			mongoTemplate.find(new Query().addCriteria(mainCriteria), WorkflowDocument.class).forEach(wd -> {
-				result.add(readValue(wd.getJson_data(), Workflow.class));
-			});;
+			 mongoTemplate.find(orQuery, WorkflowDocument.class).forEach(wd -> {
+					result.add(readValue(wd.getJson_data(), Workflow.class));
+				});
 		}
 		
     	return result;
@@ -602,9 +580,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		
 		checkExistsQuery.addCriteria(Criteria.where("workflow_id").is(task.getWorkflowInstanceId()).and("task_key").is(taskKey));
 		
-		List<TaskScheduledDocument> taskScheduledDocument = mongoTemplate.find(checkExistsQuery, TaskScheduledDocument.class);
-
-        boolean exists = !taskScheduledDocument.isEmpty();
+        boolean exists = mongoTemplate.exists(checkExistsQuery, TaskScheduledDocument.class);
 
         if (!exists) {
            
@@ -613,7 +589,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
             newTaskScheduledDocument.setTask_key(taskKey);
             newTaskScheduledDocument.setTask_id(newTaskScheduledDocument.getTask_id());
             
-            newTaskScheduledDocument = mongoTaskScheduledRepository.save(newTaskScheduledDocument);
+            newTaskScheduledDocument = mongoTemplate.save(newTaskScheduledDocument);
             
             return null!=newTaskScheduledDocument;
         } else {
@@ -651,7 +627,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	            WorkflowToTaskDocument newWorkflowToTaskDocument = new WorkflowToTaskDocument();
 	            newWorkflowToTaskDocument.setWorkflow_id(task.getWorkflowInstanceId());
 	            newWorkflowToTaskDocument.setTask_id(task.getTaskId());
-	            mongoWorkflowToTaskRepository.save(newWorkflowToTaskDocument);
+	            newWorkflowToTaskDocument = mongoTemplate.save(newWorkflowToTaskDocument);
 	        }
 	    }
 	
@@ -679,7 +655,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	            newTaskInProgressDocument.setTask_id(task.getTaskId());
 	            newTaskInProgressDocument.setWorkflow_id(task.getWorkflowInstanceId());
 	            
-	            newTaskInProgressDocument = mongoTaskInProgressRepository.save(newTaskInProgressDocument);
+	            newTaskInProgressDocument = mongoTemplate.save(newTaskInProgressDocument);
 	        }
 	    }
 	 
@@ -762,7 +738,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	        workflowDocument.setCorrelation_id(workflow.getCorrelationId());
 	        workflowDocument.setJson_data(toJson(workflow));
 	        
-	        workflowDocument = mongoWorkflowRepository.save(workflowDocument);
+	        workflowDocument = mongoTemplate.save(workflowDocument);
 	    }
 	 
 	 private void addWorkflowDefToWorkflowMapping(Workflow workflow) {
@@ -774,7 +750,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	        workflowDefToWorkflowDocument.setWorkflow_id(workflow.getWorkflowId());
 	        
 	        
-	        workflowDefToWorkflowDocument = workflowDefToWorkflowRepository.save(workflowDefToWorkflowDocument);
+	        workflowDefToWorkflowDocument = mongoTemplate.save(workflowDefToWorkflowDocument);
 	    }
 	 
 	 private void removePendingWorkflow(String workflowType, String workflowId) {
@@ -798,7 +774,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	            workflowPendingDocument.setWorkflow_id(workflowId);
 	            workflowPendingDocument.setWorkflow_type(workflowType);
 	            
-	            mongoWorkflowPendingRepository.save(workflowPendingDocument);
+	            workflowPendingDocument = mongoTemplate.save(workflowPendingDocument);
 	        }
 	    }
 	 
@@ -828,7 +804,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
        eventExecutionDocument.setExecution_id(eventExecution.getId());
        eventExecutionDocument.setJson_data(toJson(eventExecution));
        
-       eventExecutionDocument = mongoEventExecutionRepository.save(eventExecutionDocument);
+       eventExecutionDocument = mongoTemplate.save(eventExecutionDocument);
        return eventExecutionDocument!=null;
    }
    
@@ -893,7 +869,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
     	   pollDataDocument.setQueue_name(pollData.getQueueName());
     	   pollDataDocument.setJson_data(toJson(pollData));
     	   
-    	   pollDataDocument = mongoPollDataRepository.save(pollDataDocument);
+    	   pollDataDocument = mongoTemplate.save(pollDataDocument);
        }
    }
 
