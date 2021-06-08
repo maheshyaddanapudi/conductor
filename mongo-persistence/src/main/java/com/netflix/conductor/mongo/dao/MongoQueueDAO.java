@@ -236,7 +236,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	        
 	        searchQuery.addCriteria(Criteria.where("name").is(queueName));
 	        
-	        boolean exists = mongoTemplate.exists(searchQuery, QueueDocument.class);
+	        boolean exists = mongoTemplate.count(searchQuery, QueueDocument.class)>0;
 	        if (!exists) {
 	        	QueueDocument newQueueDocument = new QueueDocument();
 	        	newQueueDocument.setQueueName(queueName);
