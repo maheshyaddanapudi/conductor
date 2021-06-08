@@ -25,21 +25,12 @@ public class MongoTestConfiguration {
 	
     private static final String MONGO_INITDB_DATABASE = "conductor";
 	
-
-	@BeforeAll
-	public static void setUpAll() {
-        MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
-    }
-    
-    @AfterAll
-    public static void tearDownAll() {
-      if (!MONGO_DB_CONTAINER.isShouldBeReused()) {
-        MONGO_DB_CONTAINER.stop();
-      }
-    }
-    
-    @Bean
+      @Bean
       public MongoTemplate mongoTemplate() {
+    	
+		if(!MONGO_DB_CONTAINER.isRunning())
+			MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
+		
 	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
 	  }
 }
