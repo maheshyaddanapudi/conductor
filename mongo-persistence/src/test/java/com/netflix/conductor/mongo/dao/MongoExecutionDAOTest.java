@@ -44,6 +44,8 @@ import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
 @SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
+@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
+@Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
     private MongoExecutionDAO executionDAO;
