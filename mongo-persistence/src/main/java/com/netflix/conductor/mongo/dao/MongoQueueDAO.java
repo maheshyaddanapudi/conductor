@@ -214,7 +214,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	        	aQueueMessageDocument.setOffsetTimeSeconds(offsetTimeInSecond);
 	        	aQueueMessageDocument.setDeliverOn(getOffsetAddedDate(((Long)offsetTimeInSecond).intValue()));
 	        	aQueueMessageDocument.setPopped(false);
-	        	mongoTemplate.save(aQueueMessageDocument);
+	        	aQueueMessageDocument = mongoTemplate.save(aQueueMessageDocument);
 	        }
 	        else {
 	        	QueueMessageDocument newQueueMessageDocument = new QueueMessageDocument();

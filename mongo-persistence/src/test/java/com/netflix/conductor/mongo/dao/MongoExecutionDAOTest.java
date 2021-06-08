@@ -64,16 +64,12 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
   	
   	  private static final String MONGO_INITDB_DATABASE = "conductor";
   	  
-  	private MongoTemplate mongoTemplate;
+  	public MongoTemplate mongoTemplate;
 	  
 	  @Before
 	  public void setup() {
 		if(!MONGO_DB_CONTAINER.isRunning())
 				MONGO_DB_CONTAINER.withEnv("MONGO_INITDB_DATABASE", MONGO_INITDB_DATABASE).start();
-	  }
-	  
-	  @BeforeEach
-	  public void mongo() {
 	  	
 	  	mongoTemplate = new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
