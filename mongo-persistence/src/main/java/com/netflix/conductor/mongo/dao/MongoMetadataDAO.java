@@ -39,7 +39,6 @@ import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
-import com.netflix.conductor.core.exception.ApplicationException.Code;
 import com.netflix.conductor.dao.EventHandlerDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.metrics.Monitors;
@@ -544,10 +543,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
     	List<WorkflowDef> result = new ArrayList<WorkflowDef>();
     	
         Query query = new Query();
-        query.addCriteria(Criteria.where("version").elemMatch(Criteria.where("latest_version")));
-        
-        
-        //query.fields().include("version").equals(query.fields().include("latest_version"));
+        query.withHint("{ version : { $eq: $latest_version } }");
         
         mongoTemplate.find(query, MetaWorkflowDefDocument.class).forEach(wdd -> {
         	result.add(readValue(wdd.getJson_data(), WorkflowDef.class));

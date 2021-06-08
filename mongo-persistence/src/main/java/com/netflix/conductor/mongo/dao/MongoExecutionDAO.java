@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -680,7 +679,7 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 		 
 		 	Query searchQuery= new Query();
 		 	searchQuery.addCriteria(Criteria.where("task_def_name").is(task.getTaskDefName()));
-		 	searchQuery.with(Sort.by(new Order(Direction.ASC, "created_on")));
+		 	searchQuery.with(Sort.by(Order.asc("created_on")));
 		 	searchQuery.limit(limit);
 		 	
 		 	List<String> tips= new ArrayList<String>(); 
