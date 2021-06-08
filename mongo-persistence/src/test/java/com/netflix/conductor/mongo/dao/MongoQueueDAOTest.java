@@ -35,13 +35,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -54,8 +52,7 @@ import com.netflix.conductor.mongo.entities.QueueMessageDocument;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
-@DataMongoTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
-@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
+@SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoQueueDAOTest {
 

@@ -12,23 +12,20 @@
  */
 package com.netflix.conductor;
 
+import java.io.IOException;
+import java.util.Properties;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.util.Properties;
-
 // Prevents from the datasource beans to be loaded, AS they are needed only for specific databases.
 // In case that SQL database is selected this class will be imported back in the appropriate database persistence module.
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, MongoAutoConfiguration.class, MongoDataAutoConfiguration.class, MongoRepositoriesAutoConfiguration.class})
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 public class Conductor {
 
     private static final Logger log = LoggerFactory.getLogger(Conductor.class);

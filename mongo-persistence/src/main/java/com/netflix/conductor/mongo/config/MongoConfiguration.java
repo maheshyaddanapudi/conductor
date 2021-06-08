@@ -21,7 +21,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.dao.ExecutionDAO;
@@ -33,7 +32,6 @@ import com.netflix.conductor.mongo.dao.MongoQueueDAO;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(name = "conductor.db.type", havingValue = "mongo")
-@EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoConfiguration {
 	
