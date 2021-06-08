@@ -27,8 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationSpELExpression;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -36,8 +34,6 @@ import org.springframework.data.mongodb.core.query.Update;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 import com.netflix.conductor.annotations.Trace;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
@@ -54,7 +50,7 @@ import com.netflix.conductor.mongo.entities.MetaWorkflowDefDocument;
 @Trace
 public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, EventHandlerDAO {
 	
-	public MongoTemplate mongoTemplate;
+	private final MongoTemplate mongoTemplate;
 		
 	 public MongoMetadataDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
 			super(objectMapper);

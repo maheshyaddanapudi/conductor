@@ -47,7 +47,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
 	
 	private static final Long UNACK_SCHEDULE_MS = 60_000L;
 	
-	public MongoTemplate mongoTemplate;
+	private final MongoTemplate mongoTemplate;
 	
 	public MongoQueueDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
 		super(objectMapper);

@@ -58,7 +58,7 @@ import com.netflix.conductor.mongo.entities.WorkflowToTaskDocument;
 @Trace
 public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, RateLimitingDAO, PollDataDAO {
 	
-	public MongoTemplate mongoTemplate;
+	private final MongoTemplate mongoTemplate;
 	
 	public MongoExecutionDAO(ObjectMapper objectMapper, MongoTemplate mongoTemplate) {
 		super(objectMapper);
