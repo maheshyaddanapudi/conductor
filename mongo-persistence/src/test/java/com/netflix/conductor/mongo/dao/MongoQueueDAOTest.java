@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -78,7 +77,7 @@ public class MongoQueueDAOTest {
     
     public MongoTemplate mongoTemplate;
     
-    @BeforeAll
+    @Before
     public void setup() {
     	
     	if(!MONGO_DB_CONTAINER.isRunning())
