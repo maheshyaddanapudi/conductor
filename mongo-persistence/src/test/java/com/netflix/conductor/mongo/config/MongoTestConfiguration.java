@@ -1,20 +1,15 @@
 package com.netflix.conductor.mongo.config;
 
-import javax.validation.constraints.NotNull;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.util.TestPropertyValues;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
 
 import com.mongodb.client.MongoClients;
@@ -22,6 +17,7 @@ import com.mongodb.client.MongoClients;
 @TestConfiguration
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
+@TestPropertySource(properties = {"spring.main.allow-bean-definition-overriding=true"})
 public class MongoTestConfiguration {
 	
 	private static final MongoDBContainer MONGO_DB_CONTAINER =
@@ -42,22 +38,8 @@ public class MongoTestConfiguration {
       }
     }
     
-    public static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-    	  @Override
-    	  public void initialize(@NotNull ConfigurableApplicationContext configurableApplicationContext) {
-    	    TestPropertyValues.of(
-    	      String.format("spring.data.mongodb.uri: %s", MONGO_DB_CONTAINER.getReplicaSetUrl())
-    	    ).applyTo(configurableApplicationContext);
-    	    TestPropertyValues.of(
-    	    	      String.format("spring.main.allow-bean-definition-overriding: %s","true")
-    	    	    ).applyTo(configurableApplicationContext);
-    	    
-    	  }
-    	}
-    
     @Bean
-    @Primary
-	  public MongoTemplate mongoTemplate() {
+      public MongoTemplate mongoTemplate() {
 	  	return new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
 	  }
 }
