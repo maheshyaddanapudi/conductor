@@ -26,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -43,7 +44,7 @@ import com.netflix.conductor.mongo.config.MongoTestConfiguration;
 
 @ContextConfiguration(classes = {TestObjectMapperConfiguration.class, MongoTestConfiguration.class})
 @RunWith(SpringRunner.class)
-@SpringBootTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
+@DataMongoTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 @EnableMongoRepositories(basePackages = {"com.netflix.conductor.mongo.repositories"})
 @Import({MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
 public class MongoExecutionDAOTest extends ExecutionDAOTest {
