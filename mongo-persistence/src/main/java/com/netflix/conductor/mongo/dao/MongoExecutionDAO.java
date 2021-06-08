@@ -328,7 +328,6 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         if (workflow != null) {
 
             removeWorkflowDefToWorkflowMapping(workflow);
-            removeWorkflow(workflowId);
             removePendingWorkflow(workflow.getWorkflowName(), workflowId);
         
             removed = true;
@@ -423,7 +422,9 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
         List<Workflow> workflows = new LinkedList<>();
  
         Query searchQuery = new Query();
-        searchQuery.addCriteria(Criteria.where("workflow_def").is(workflowName).and("date_str").gte(startTime).and("date_str").lte(endTime));
+        searchQuery.addCriteria(Criteria.where("workflow_def").is(workflowName));
+        searchQuery.addCriteria(Criteria.where("date_str").gte(startTime));
+        searchQuery.addCriteria(Criteria.where("date_str").lte(endTime));
 
         List<String> workflowIds = new ArrayList<String>();
         mongoTemplate.find(searchQuery, WorkflowDefToWorkflowDocument.class).forEach(wdtw -> workflowIds.add(wdtw.getWorkflow_id()));

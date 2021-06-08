@@ -100,9 +100,9 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             mongoTemplate.remove(new Query().addCriteria(Criteria.where("name").is(name)), MetaTaskDefDocument.class);
         } catch (Exception e) {
             Monitors.error(CLASS_NAME, "removeTaskDef");
-            String errorMsg = String.format("Failed to remove task definition: %s", name);
+            String errorMsg = String.format("No such task definition: %s", name);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(Code.NOT_FOUND, errorMsg, e);
         }
         refreshTaskDefsCache();
     }
@@ -196,9 +196,9 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
             maxVersion.ifPresent(newVersion -> updateLatestVersion(name, newVersion));
         } catch (Exception e) {
             Monitors.error(CLASS_NAME, "removeTaskDef");
-            String errorMsg = String.format("Failed to remove task definition: %s", name);
+            String errorMsg = String.format("No such workflow definition: %s version: %d", name, version);
             LOGGER.error(errorMsg, e);
-            throw new ApplicationException(Code.BACKEND_ERROR, errorMsg, e);
+            throw new ApplicationException(Code.NOT_FOUND, errorMsg, e);
         }
     }
 
