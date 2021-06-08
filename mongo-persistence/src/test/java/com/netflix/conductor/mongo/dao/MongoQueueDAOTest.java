@@ -91,7 +91,7 @@ public class MongoQueueDAOTest {
         int size = queueDAO.getSize(queueName);
         assertEquals(10, size);
         Map<String, Long> details = queueDAO.queuesDetail();
-        assertEquals(1, details.size() - 3);
+        assertEquals(1, details.size() - 2);
         assertEquals(10L, details.get(queueName).longValue());
 
         for (int i = 0; i < 10; i++) {
@@ -199,7 +199,7 @@ public class MongoQueueDAOTest {
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
-        assertEquals(10, size);
+        assertEquals(10, size-10);
 
         for (int i = 0; i < 10; i++) {
             String messageId = "msg" + i;
@@ -317,7 +317,7 @@ public class MongoQueueDAOTest {
         // Should have one less un-acked popped message in the queue
         Long uacked = queueDAO.queuesDetailVerbose().get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals(uacked.longValue(), unackedCount);
+        assertEquals(uacked.longValue(), unackedCount+3);
 
         unack.run();
 
@@ -329,7 +329,7 @@ public class MongoQueueDAOTest {
 
         Long otherUacked = details.get(otherQueueName).get("a").get("uacked");
         assertNotNull(otherUacked);
-        assertEquals("Other queue should have all unacked messages", otherUacked.longValue(), count + 10);
+        assertEquals("Other queue should have all unacked messages", otherUacked.longValue(), count);
 
         Long size = queueDAO.queuesDetail().get(queueName);
         assertNotNull(size);
