@@ -317,7 +317,7 @@ public class MongoQueueDAOTest {
         // Should have one less un-acked popped message in the queue
         Long uacked = queueDAO.queuesDetailVerbose().get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals(uacked.longValue(), unackedCount+3);
+        assertEquals(uacked.longValue(), unackedCount);
 
         unack.run();
 
