@@ -131,8 +131,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
         long updatedOffsetTimeInSecond = unackTimeout / 1000;
 
         Query query = new Query();
-    	query.addCriteria(Criteria.where("queue_name").is(queueName));
-    	query.addCriteria(Criteria.where("message_id").is(messageId));
+    	query.addCriteria(Criteria.where("queue_name").is(queueName).and("message_id").is(messageId));
     	Update update = new Update().max(DAO_NAME, query);
     	update.set("offset_time_seconds", updatedOffsetTimeInSecond);
     	update.set("deliver_on", getOffsetAddedDate(((Long)updatedOffsetTimeInSecond).intValue()));
@@ -155,8 +154,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
     	
         queueNames.forEach(queueName -> {
         	Query query = new Query();
-            query.addCriteria(Criteria.where("popped").is(false));
-            query.addCriteria(Criteria.where("queue_name").is(queueName));
+            query.addCriteria(Criteria.where("popped").is(false).and("queue_name").is(queueName));
             long size = mongoTemplate.count(query, QueueMessageDocument.class);
         	detail.put(queueName, size);
         });
@@ -173,13 +171,11 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
         queueNames.forEach(queueName -> {
         	
         	Query sizeQuery = new Query();
-        	sizeQuery.addCriteria(Criteria.where("popped").is(false));
-        	sizeQuery.addCriteria(Criteria.where("queue_name").is(queueName));
+        	sizeQuery.addCriteria(Criteria.where("popped").is(false).and("queue_name").is(queueName));
             long size = mongoTemplate.count(sizeQuery, QueueMessageDocument.class);
             
             Query unackedQuery = new Query();
-            unackedQuery.addCriteria(Criteria.where("popped").is(true));
-            unackedQuery.addCriteria(Criteria.where("queue_name").is(queueName));
+            unackedQuery.addCriteria(Criteria.where("popped").is(true).and("queue_name").is(queueName));
             long queueUnacked = mongoTemplate.count(unackedQuery, QueueMessageDocument.class);
             
             result.put(queueName, ImmutableMap.of("a", ImmutableMap.of( // sharding not implemented, returning only
@@ -253,8 +249,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
         logger.trace("processAllUnacks started");
 
         Query query = new Query();
-    	query.addCriteria(Criteria.where("popped").is(true));
-    	query.addCriteria(Criteria.where("deliver_on").lt(getOffsetAddedDate(-60)));
+    	query.addCriteria(Criteria.where("popped").is(true).and("deliver_on").lt(getOffsetAddedDate(-60)));
     	Update update = new Update().max(DAO_NAME, query);
     	update.set("popped", false);
 
@@ -283,9 +278,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
         for (Message message : messages) {
             
         	Query query = new Query();
-        	query.addCriteria(Criteria.where("popped").is(false));
-        	query.addCriteria(Criteria.where("queue_name").is(queueName));
-        	query.addCriteria(Criteria.where("message_id").is(message.getId()));
+        	query.addCriteria(Criteria.where("popped").is(false).and("queue_name").is(queueName).and("message_id").is(message.getId()));
         	Update update = new Update().max(DAO_NAME, query);
         	update.set("popped", true);
         	
@@ -304,9 +297,7 @@ public class MongoQueueDAO  extends MongoBaseDAO implements QueueDAO {
         List<Order> orderBy = new ArrayList<Order>();
         
         Query query = new Query();
-        query.addCriteria(Criteria.where("queue_name").is(queueName));
-    	query.addCriteria(Criteria.where("popped").is(false));
-    	query.addCriteria(Criteria.where("deliver_on").lte(getOffsetAddedDate(1000)));
+        query.addCriteria(Criteria.where("queue_name").is(queueName).and("popped").is(false).and("deliver_on").lte(getOffsetAddedDate(1000)));
     	orderBy.add(new Order(Direction.DESC, "priority"));
     	orderBy.add(new Order(Direction.ASC, "created_on"));
     	orderBy.add(new Order(Direction.ASC, "deliver_on"));

@@ -156,12 +156,12 @@ public class MongoQueueDAOTest {
     @Test
     public void pollMessagesTest() {
         final List<Message> messages = new ArrayList<>();
-        final String queueName = "issue399_testQueue_1";
+        final String queueName = "issue399_testQueue";
         final int totalSize = 10;
 
         for (int i = 0; i < totalSize; i++) {
             String payload = "{\"id\": " + i + ", \"msg\":\"test " + i + "\"}";
-            Message m = new Message("testmsg--" + i, payload, "");
+            Message m = new Message("testmsg-" + i, payload, "");
             if (i % 2 == 0) {
                 // Set priority on message with pair id
                 m.setPriority(99 - i);
@@ -243,7 +243,7 @@ public class MongoQueueDAOTest {
     @Test
     public void pollDeferredMessagesTest() throws InterruptedException {
         final List<Message> messages = new ArrayList<>();
-        final String queueName = "issue448_testQueue_1";
+        final String queueName = "issue448_testQueue";
         final int totalSize = 10;
 
         for (int i = 0; i < totalSize; i++) {
@@ -261,9 +261,9 @@ public class MongoQueueDAOTest {
             }
 
             String payload = "{\"id\": " + i + ",\"offset_time_seconds\":" + offset + "}";
-            Message m = new Message("testmsg---" + i, payload, "");
+            Message m = new Message("testmsg-" + i, payload, "");
             messages.add(m);
-            queueDAO.push(queueName, "testmsg---" + i, offset);
+            queueDAO.push(queueName, "testmsg-" + i, offset);
         }
 
         // Assert that all messages were persisted and no extras are in there
@@ -295,7 +295,7 @@ public class MongoQueueDAOTest {
         assertFalse("Second poll was empty", secondPoll.isEmpty());
         assertEquals("Second poll size mismatch", secondPollSize, secondPoll.size());
 
-        List<String> expectedIds = Arrays.asList("testmsg---4", "testmsg---6", "testmsg---7");
+        List<String> expectedIds = Arrays.asList("testmsg-4", "testmsg-6", "testmsg-7");
         for (int i = 0; i < secondPollSize; i++) {
             String actual = secondPoll.get(i).getId();
             assertTrue("Unexpected Id: " + actual, expectedIds.contains(actual));
