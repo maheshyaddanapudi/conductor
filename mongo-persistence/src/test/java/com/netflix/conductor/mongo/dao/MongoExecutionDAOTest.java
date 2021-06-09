@@ -16,8 +16,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -77,6 +82,71 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
     
+	  @Test
+	    @Override
+	  public void testTaskOps() {
+	        List<Task> tasks = new LinkedList<>();
+	        String workflowId = UUID.randomUUID().toString();
+
+	        for (int i = 0; i < 3; i++) {
+	            Task task = new Task();
+	            task.setScheduledTime(1L);
+	            task.setSeq(1);
+	            task.setTaskId(workflowId + "_t" + i);
+	            task.setReferenceTaskName("testTaskOps" + i);
+	            task.setRetryCount(0);
+	            task.setWorkflowInstanceId(workflowId);
+	            task.setTaskDefName("testTaskOps" + i);
+	            task.setStatus(Task.Status.IN_PROGRESS);
+	            tasks.add(task);
+	        }
+
+	        for (int i = 0; i < 3; i++) {
+	            Task task = new Task();
+	            task.setScheduledTime(1L);
+	            task.setSeq(1);
+	            task.setTaskId("x" + workflowId + "_t" + i);
+	            task.setReferenceTaskName("testTaskOps" + i);
+	            task.setRetryCount(0);
+	            task.setWorkflowInstanceId("x" + workflowId);
+	            task.setTaskDefName("testTaskOps" + i);
+	            task.setStatus(Task.Status.IN_PROGRESS);
+	            getExecutionDAO().createTasks(Collections.singletonList(task));
+	        }
+
+	        List<Task> created = getExecutionDAO().createTasks(tasks);
+	        assertEquals(tasks.size(), created.size());
+
+	        List<Task> pending = getExecutionDAO().getPendingTasksForTaskType(tasks.get(0).getTaskDefName());
+	        assertNotNull(pending);
+	        assertEquals(2, pending.size());
+	        //Pending list can come in any order.  finding the one we are looking for and then comparing
+	        Task matching = pending.stream().filter(task -> task.getTaskId().equals(tasks.get(0).getTaskId())).findAny()
+	            .get();
+	        assertTrue(EqualsBuilder.reflectionEquals(matching, tasks.get(0)));
+
+	        for (int i = 0; i < 3; i++) {
+	            Task found = getExecutionDAO().getTask(workflowId + "_t" + i);
+	            assertNotNull(found);
+	            found.getOutputData().put("updated", true);
+	            found.setStatus(Task.Status.COMPLETED);
+	            getExecutionDAO().updateTask(found);
+	        }
+
+	        List<String> taskIds = tasks.stream().map(Task::getTaskId).collect(Collectors.toList());
+	        List<Task> found = getExecutionDAO().getTasks(taskIds);
+	        assertEquals(taskIds.size(), found.size());
+	        found.forEach(task -> {
+	            assertTrue(task.getOutputData().containsKey("updated"));
+	            assertEquals(true, task.getOutputData().get("updated"));
+	            boolean removed = getExecutionDAO().removeTask(task.getTaskId());
+	            assertTrue(removed);
+	        });
+
+	        found = getExecutionDAO().getTasks(taskIds);
+	        assertTrue(found.isEmpty());
+	    }
+
 	    @Test
 	    @Override
 	    public void complexExecutionTest() {
