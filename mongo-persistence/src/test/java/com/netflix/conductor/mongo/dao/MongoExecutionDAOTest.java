@@ -14,6 +14,7 @@ package com.netflix.conductor.mongo.dao;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -37,6 +38,7 @@ import org.testcontainers.containers.MongoDBContainer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
+import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.dao.ExecutionDAO;
@@ -75,6 +77,74 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
     
+	    @Test
+	    @Override
+	    public void complexExecutionTest() {
+	        Workflow workflow = createTestWorkflow();
+	        int numTasks = workflow.getTasks().size();
+
+	        String workflowId = getExecutionDAO().createWorkflow(workflow);
+	        assertEquals(workflow.getWorkflowId(), workflowId);
+
+	        List<Task> created = getExecutionDAO().createTasks(workflow.getTasks());
+	        assertEquals(workflow.getTasks().size(), created.size());
+
+	        Workflow workflowWithTasks = getExecutionDAO().getWorkflow(workflow.getWorkflowId(), true);
+	        assertEquals(workflowId, workflowWithTasks.getWorkflowId());
+	        assertEquals(numTasks, workflowWithTasks.getTasks().size());
+
+	        Workflow found = getExecutionDAO().getWorkflow(workflowId, false);
+	        assertTrue(found.getTasks().isEmpty());
+
+	        workflow.getTasks().clear();
+	        assertEquals(workflow, found);
+
+	        workflow.getInput().put("updated", true);
+	        getExecutionDAO().updateWorkflow(workflow);
+	        found = getExecutionDAO().getWorkflow(workflowId);
+	        assertNotNull(found);
+	        assertTrue(found.getInput().containsKey("updated"));
+	        assertEquals(true, found.getInput().get("updated"));
+
+	        List<String> running = getExecutionDAO()
+	            .getRunningWorkflowIds(workflow.getWorkflowName(), workflow.getWorkflowVersion());
+	        assertNotNull(running);
+	        assertTrue(running.isEmpty());
+
+	        workflow.setStatus(Workflow.WorkflowStatus.RUNNING);
+	        getExecutionDAO().updateWorkflow(workflow);
+
+	        running = getExecutionDAO().getRunningWorkflowIds(workflow.getWorkflowName(), workflow.getWorkflowVersion());
+	        assertNotNull(running);
+	        assertEquals(1, running.size());
+	        assertEquals(workflow.getWorkflowId(), running.get(0));
+
+	        List<Workflow> pending = getExecutionDAO()
+	            .getPendingWorkflowsByType(workflow.getWorkflowName(), workflow.getWorkflowVersion());
+	        assertNotNull(pending);
+	        assertEquals(1, pending.size());
+	        assertEquals(3, pending.get(0).getTasks().size());
+	        pending.get(0).getTasks().clear();
+	        assertEquals(workflow, pending.get(0));
+
+	        workflow.setStatus(Workflow.WorkflowStatus.COMPLETED);
+	        getExecutionDAO().updateWorkflow(workflow);
+	        running = getExecutionDAO().getRunningWorkflowIds(workflow.getWorkflowName(), workflow.getWorkflowVersion());
+	        assertNotNull(running);
+	        assertTrue(running.isEmpty());
+
+	        List<Workflow> bytime = getExecutionDAO()
+	            .getWorkflowsByType(workflow.getWorkflowName(), System.currentTimeMillis(),
+	                System.currentTimeMillis() + 100);
+	        assertNotNull(bytime);
+	        assertTrue(bytime.isEmpty());
+
+	        bytime = getExecutionDAO().getWorkflowsByType(workflow.getWorkflowName(), workflow.getCreateTime() - 10,
+	            workflow.getCreateTime() + 10);
+	        assertNotNull(bytime);
+	        assertEquals(1, bytime.size());
+	    }
+
   	 @Test
      public void testPendingByCorrelationId() {
 

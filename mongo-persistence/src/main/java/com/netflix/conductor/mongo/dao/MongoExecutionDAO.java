@@ -141,7 +141,12 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 
 
         for (Task task : tasks) {
-            validate(task);
+            try {
+            	validate(task);
+            }
+            catch(NullPointerException npe) {
+            	throw new ApplicationException(ApplicationException.Code.NOT_FOUND, npe.getMessage());
+            }
 
             task.setScheduledTime(System.currentTimeMillis());
 

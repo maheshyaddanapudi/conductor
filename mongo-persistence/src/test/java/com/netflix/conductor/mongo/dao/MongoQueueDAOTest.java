@@ -120,7 +120,7 @@ public class MongoQueueDAOTest {
         popped.forEach(messageId -> queueDAO.ack(queueName, messageId));
 
         verbose = queueDAO.queuesDetailVerbose();
-        assertEquals(1, verbose.size());
+        assertEquals(4, verbose.size());
         shardSize = verbose.get(queueName).get("a").get("size");
         unackedSize = verbose.get(queueName).get("a").get("uacked");
         assertEquals(0, shardSize);
