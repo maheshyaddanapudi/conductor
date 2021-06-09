@@ -543,7 +543,7 @@ public class MongoMetadataDAO extends MongoBaseDAO implements MetadataDAO, Event
     	List<WorkflowDef> result = new ArrayList<WorkflowDef>();
     	
         Query query = new Query();
-        query.withHint("{ version : { $eq: $latest_version } }");
+//        query.withHint("{ version : { $eq: $latest_version } }");
         query.with(Sort.by(Direction.DESC, "version")).limit(1);
         
         mongoTemplate.find(query, MetaWorkflowDefDocument.class).forEach(wdd -> {
