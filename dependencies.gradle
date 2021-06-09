@@ -61,4 +61,5 @@ ext {
     revSpotifyCompletableFutures = '0.3.3'
     revTestContainer = '1.15.1'
     revLombok = '1.18.20'
+    revGson = '2.8.6'
 }

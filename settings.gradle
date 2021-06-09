@@ -41,6 +41,7 @@ include 'redis-persistence'
 include 'mysql-persistence'
 include 'mongo-persistence'
 include 'postgres-persistence'
+include 'oracle-persistence'
 
 include 'es6-persistence'
 
