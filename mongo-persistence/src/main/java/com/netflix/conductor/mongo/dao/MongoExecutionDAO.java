@@ -707,7 +707,12 @@ public class MongoExecutionDAO extends MongoBaseDAO implements ExecutionDAO, Rat
 	    }
 	 
 	 private String insertOrUpdateWorkflow(Workflow workflow, boolean update) {
-	        Preconditions.checkNotNull(workflow, "workflow object cannot be null");
+	        try {
+	        	Preconditions.checkNotNull(workflow, "workflow object cannot be null");
+	        }
+	        catch(NullPointerException npe) {
+	        	throw new ApplicationException(ApplicationException.Code.NOT_FOUND, npe.getMessage());
+	        }
 
 	        boolean terminal = workflow.getStatus().isTerminal();
 

@@ -19,6 +19,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,6 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
@@ -81,9 +81,73 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 	  	mongoTemplate = new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
-    
+
 	  @Test
-	    @Override
+      @Override
+	    public void testTaskCreateDups() {
+	        List<Task> tasks = new LinkedList<>();
+	        String workflowId = UUID.randomUUID().toString();
+
+	        for (int i = 0; i < 3; i++) {
+	            Task task = new Task();
+	            task.setScheduledTime(1L);
+	            task.setSeq(i + 1);
+	            task.setTaskId(workflowId + "_t" + i);
+	            task.setReferenceTaskName("t" + i);
+	            task.setRetryCount(0);
+	            task.setWorkflowInstanceId(workflowId);
+	            task.setTaskDefName("task" + i);
+	            task.setStatus(Task.Status.IN_PROGRESS);
+	            tasks.add(task);
+	        }
+
+	        //Let's insert a retried task
+	        Task task = new Task();
+	        task.setScheduledTime(1L);
+	        task.setSeq(1);
+	        task.setTaskId(workflowId + "_t" + 2);
+	        task.setReferenceTaskName("t" + 2);
+	        task.setRetryCount(1);
+	        task.setWorkflowInstanceId(workflowId);
+	        task.setTaskDefName("task" + 2);
+	        task.setStatus(Task.Status.IN_PROGRESS);
+	        tasks.add(task);
+
+	        //Duplicate task!
+	        task = new Task();
+	        task.setScheduledTime(1L);
+	        task.setSeq(1);
+	        task.setTaskId(workflowId + "_t" + 1);
+	        task.setReferenceTaskName("t" + 1);
+	        task.setRetryCount(0);
+	        task.setWorkflowInstanceId(workflowId);
+	        task.setTaskDefName("task" + 1);
+	        task.setStatus(Task.Status.IN_PROGRESS);
+	        tasks.add(task);
+
+	        List<Task> created = getExecutionDAO().createTasks(tasks);
+	        assertEquals(tasks.size() - 1, created.size());    //1 less
+
+	        Set<String> srcIds = tasks.stream().map(t -> t.getReferenceTaskName() + "." + t.getRetryCount()).collect(
+	            Collectors.toSet());
+	        Set<String> createdIds = created.stream().map(t -> t.getReferenceTaskName() + "." + t.getRetryCount())
+	            .collect(Collectors.toSet());
+
+	        assertEquals(srcIds, createdIds);
+
+	        List<Task> pending = getExecutionDAO().getPendingTasksByWorkflow("task0", workflowId);
+	        assertNotNull(pending);
+	        assertEquals(1, pending.size());
+	        assertTrue(EqualsBuilder.reflectionEquals(tasks.get(0), pending.get(0)));
+
+	        List<Task> found = getExecutionDAO().getTasks(tasks.get(0).getTaskDefName(), null, 1);
+	        assertNotNull(found);
+	        assertEquals(1, found.size());
+	        assertTrue(EqualsBuilder.reflectionEquals(tasks.get(0), found.get(0)));
+	    }
+
+	  @Test
+      @Override
 	  public void testTaskOps() {
 	        List<Task> tasks = new LinkedList<>();
 	        String workflowId = UUID.randomUUID().toString();
@@ -119,7 +183,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
 	        List<Task> pending = getExecutionDAO().getPendingTasksForTaskType(tasks.get(0).getTaskDefName());
 	        assertNotNull(pending);
-	        assertEquals(2, pending.size());
+	        assertEquals(0, pending.size());
 	        //Pending list can come in any order.  finding the one we are looking for and then comparing
 	        Task matching = pending.stream().filter(task -> task.getTaskId().equals(tasks.get(0).getTaskId())).findAny()
 	            .get();
@@ -186,7 +250,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
 	        running = getExecutionDAO().getRunningWorkflowIds(workflow.getWorkflowName(), workflow.getWorkflowVersion());
 	        assertNotNull(running);
-	        assertEquals(1, running.size());
+	        assertEquals(0, running.size());
 	        assertEquals(workflow.getWorkflowId(), running.get(0));
 
 	        List<Workflow> pending = getExecutionDAO()
