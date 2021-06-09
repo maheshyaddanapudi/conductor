@@ -57,7 +57,7 @@ services:
 
   conductor-ui:
     environment:
-      - WF_SERVER=http://conductor-server:8080/api
+      - WF_SERVER=http://localhost:8080/api
     image: zzzmahesh/conductor-ng-ui:version-4.0.3
     networks:
       - internal
