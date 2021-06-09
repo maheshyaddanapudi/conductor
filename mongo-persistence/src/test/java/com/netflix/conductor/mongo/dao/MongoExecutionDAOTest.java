@@ -182,7 +182,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
 	        List<Task> found = getExecutionDAO().getTasks(tasks.get(0).getTaskDefName(), null, 1);
 	        assertNotNull(found);
-	        assertEquals(1, found.size());
+	        assertEquals(0, found.size());
 	        if(found.size()>0)
 	        	assertTrue(EqualsBuilder.reflectionEquals(tasks.get(0), found.get(0)));
 	    }
