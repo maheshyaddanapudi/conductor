@@ -61,11 +61,8 @@ services:
 
   conductor-ui:
     environment:
-      - WF_SERVER=http://conductor-server:8080/api/
-    image: conductor:ui
-    build:
-      context: ../
-      dockerfile: docker/ui/Dockerfile
+      - WF_SERVER=http://localhost:8080
+    image: zzzmahesh/conductor-ng-ui:version-4.0.3
     networks:
       - internal
     ports:

@@ -1,8 +1,33 @@
+# docker-compose -f docker/docker-compose-oracle.yaml up
+## Run the above command from conductor root directory
+
 version: '2.3'
 
 services:
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=conductor
+      - MONGO_INITDB_ROOT_PASSWORD=conductor
+      - MONGO_INITDB_DATABASE=conductor
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/conductor --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    ports:
+      - 27017:27017
+    networks:
+      - internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
   postgres:
     image: postgres
+    #volumes:
     #  - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=keycloak
@@ -67,7 +92,7 @@ services:
 
   conductor-server:
     environment:
-      - CONFIG_PROP=config-secure.properties
+      - CONFIG_PROP=config-mongo-secure.properties
     image: conductor:server
     build:
       context: ../
@@ -83,12 +108,12 @@ services:
       retries: 12
     links:
       - elasticsearch:es
-      - mysql:mysql
+      - mongo:mongo
       - keycloak:keycloak
     depends_on:
       elasticsearch:
         condition: service_healthy
-      mysql:
+      mongo:
         condition: service_healthy
       keycloak:
         condition: service_healthy

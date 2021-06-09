@@ -3,6 +3,7 @@ version: '2.3'
 services:
   postgres:
     image: postgres
+    #volumes:
     #  - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=keycloak
@@ -65,9 +66,37 @@ services:
         max-size: "1k"
         max-file: "3"
 
+  mysql:
+    image: mysql:5.7
+    restart: on-failure
+    networks:
+      - internal
+    ports:
+      - 3306:3306
+      - 33060:33060
+    environment:
+      MYSQL_ROOT_PASSWORD: Root@1234
+      MYSQL_DATABASE: conductor
+      MYSQL_USER: conductor
+      MYSQL_PASSWORD: conductor
+      MYSQL_INITDB_SKIP_TZINFO: NONE
+    healthcheck:
+      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-pRoot@1234' ]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+    mem_limit: "512000000"
+    #volumes:
+     # - mysql_data:/var/lib/mysql
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
   conductor-server:
     environment:
-      - CONFIG_PROP=config-secure.properties
+      - CONFIG_PROP=config-mysql-secure.properties
     image: conductor:server
     build:
       context: ../
@@ -82,7 +111,7 @@ services:
       timeout: 30s
       retries: 12
     links:
-      - elasticsearch:es
+      - elasticsearch:elasticsearch
       - mysql:mysql
       - keycloak:keycloak
     depends_on:
