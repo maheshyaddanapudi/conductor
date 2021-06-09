@@ -223,7 +223,7 @@ public class MongoQueueDAOTest {
             queueDAO.push(queueName, messageId, offsetTimeInSecond);
         }
         int size = queueDAO.getSize(queueName);
-        assertEquals(20, size);
+        assertEquals(10, size);
 
         for (int i = 0; i < 10; i++) {
             String messageId = "msg" + i;
