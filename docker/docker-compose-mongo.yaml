@@ -57,7 +57,7 @@ services:
 
   conductor-ui:
     environment:
-      - WF_SERVER=http://localhost:8080/api
+      - WF_SERVER=http://localhost:8080
     image: zzzmahesh/conductor-ng-ui:version-4.0.3
     networks:
       - internal
@@ -65,6 +65,9 @@ services:
       - 80:80
     links:
       - conductor-server:conductor-server
+    depends_on:
+      conductor-server:
+        condition: service_healthy
 
   elasticsearch:
     image: elasticsearch:6.8.15
