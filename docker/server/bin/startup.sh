@@ -33,4 +33,4 @@ fi
 
 echo "Using java options config: $JAVA_OPTS"
 
-java ${JAVA_OPTS} -jar -DCONDUCTOR_CONFIG_FILE=$config_file conductor-server-*-boot.jar | /app/logs/server.log
+java ${JAVA_OPTS} -jar -DCONDUCTOR_CONFIG_FILE=$config_file conductor-server-*-boot.jar | tee /app/logs/server.log
