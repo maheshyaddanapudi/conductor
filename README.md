@@ -71,6 +71,43 @@ Below are the various artifacts published:
 * For queues, we are relying on [dyno-queues](https://github.com/Netflix/dyno-queues)
 * The indexing backend is [Elasticsearch](https://www.elastic.co/) (6.x)
 
+## Conductor Persistence
+
+### Oracle Persistence
+
+* https://github.com/maheshyaddanapudi/conductor/tree/oracle_persistence - With option to use Oracle Database as persistence unit.
+  * Oracle Persistence / Option to use Oracle Database as persistence unit : version > 12.2 - Tested well with 19C
+  * Docker Compose example with Oracle Container.
+
+### Mongo Persistence
+
+* https://github.com/maheshyaddanapudi/conductor/tree/mongo_persistence - With option to use Mongo Database as persistence unit.
+  * Mongo Persistence / Option to use Mongo Database as persistence unit.
+  * Docker Compose example with MongoDB Container.
+
+## Conductor Security
+
+### OAuth2.0 Security Configuration
+
+* https://github.com/maheshyaddanapudi/conductor/tree/oauth2 - With option to use OAuth2.0 Role Based Security for API access.
+  * Postgres Persistence
+  * Docker Compose example with Keycloak Container.
+
+[OAuth2.0 Role Based Security!](https://github.com/maheshyaddanapudi/conductor/blob/oauth2/SECURITY.md) - Spring Security with easy configuration to secure the Conductor server APIs.
+
+Docker image published to [Docker Hub](https://hub.docker.com/repository/docker/zzzmahesh/conductor)
+
+## Master Build
+* https://github.com/maheshyaddanapudi/conductor/tree/all - With option to use OAuth2.0 Role Based Security for API access, Oracle / Mongo Persistence, in addition to existing options.
+ 
+  * Oracle Persistence / Option to use Oracle Database as persistence unit : version > 12.2 - Tested well with 19C
+  * Docker Compose example with Oracle Container.
+ 
+  * Mongo Persistence / Option to use Mongo Database as persistence unit.
+  * Docker Compose example with MongoDB Container.
+
+  * Docker Compose example with Keycloak Container using Postgres Persistence.
+
 ## Other Requirements
 * JDK 11+
 
