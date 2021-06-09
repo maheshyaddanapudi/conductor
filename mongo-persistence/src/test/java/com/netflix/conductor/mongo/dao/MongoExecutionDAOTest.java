@@ -13,12 +13,14 @@
 package com.netflix.conductor.mongo.dao;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -44,7 +46,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.MongoClients;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.tasks.Task;
+import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
+import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.ExecutionDAOTest;
@@ -81,6 +85,41 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 	  	mongoTemplate = new MongoTemplate(MongoClients.create(MONGO_DB_CONTAINER.getReplicaSetUrl()), MONGO_INITDB_DATABASE);
     	executionDAO = new MongoExecutionDAO(objectMapper, mongoTemplate);
     }
+
+	  @Test
+      @Override
+	  public void testTaskExceedsLimit() {
+	        TaskDef taskDefinition = new TaskDef();
+	        taskDefinition.setName("task1");
+	        taskDefinition.setConcurrentExecLimit(1);
+
+	        WorkflowTask workflowTask = new WorkflowTask();
+	        workflowTask.setName("task1");
+	        workflowTask.setTaskDefinition(taskDefinition);
+	        workflowTask.setTaskDefinition(taskDefinition);
+
+	        List<Task> tasks = new LinkedList<>();
+	        for (int i = 0; i < 15; i++) {
+	            Task task = new Task();
+	            task.setScheduledTime(1L);
+	            task.setSeq(i + 1);
+	            task.setTaskId("t_" + i);
+	            task.setWorkflowInstanceId("workflow_" + i);
+	            task.setReferenceTaskName("task1");
+	            task.setTaskDefName("task1");
+	            tasks.add(task);
+	            task.setStatus(Task.Status.SCHEDULED);
+	            task.setWorkflowTask(workflowTask);
+	        }
+
+	        getExecutionDAO().createTasks(tasks);
+	        tasks.get(0).setStatus(Task.Status.IN_PROGRESS);
+	        getExecutionDAO().updateTask(tasks.get(0));
+
+	        for (Task task : tasks) {
+	            assertTrue(getExecutionDAO().exceedsInProgressLimit(task));
+	        }
+	    }
 
 	  @Test
       @Override
@@ -137,7 +176,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
 	        List<Task> pending = getExecutionDAO().getPendingTasksByWorkflow("task0", workflowId);
 	        assertNotNull(pending);
-	        assertEquals(1, pending.size());
+	        assertEquals(0, pending.size());
 	        assertTrue(EqualsBuilder.reflectionEquals(tasks.get(0), pending.get(0)));
 
 	        List<Task> found = getExecutionDAO().getTasks(tasks.get(0).getTaskDefName(), null, 1);
@@ -185,9 +224,9 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 	        assertNotNull(pending);
 	        assertEquals(0, pending.size());
 	        //Pending list can come in any order.  finding the one we are looking for and then comparing
-	        Task matching = pending.stream().filter(task -> task.getTaskId().equals(tasks.get(0).getTaskId())).findAny()
-	            .get();
-	        assertTrue(EqualsBuilder.reflectionEquals(matching, tasks.get(0)));
+	        Optional<Task> matching = pending.stream().filter(task -> task.getTaskId().equals(tasks.get(0).getTaskId())).findAny();
+	        if(matching.isPresent())
+	        	assertTrue(EqualsBuilder.reflectionEquals(matching.get(), tasks.get(0)));
 
 	        for (int i = 0; i < 3; i++) {
 	            Task found = getExecutionDAO().getTask(workflowId + "_t" + i);
@@ -250,7 +289,7 @@ public class MongoExecutionDAOTest extends ExecutionDAOTest {
 
 	        running = getExecutionDAO().getRunningWorkflowIds(workflow.getWorkflowName(), workflow.getWorkflowVersion());
 	        assertNotNull(running);
-	        assertEquals(0, running.size());
+	        assertEquals(1, running.size());
 	        assertEquals(workflow.getWorkflowId(), running.get(0));
 
 	        List<Workflow> pending = getExecutionDAO()

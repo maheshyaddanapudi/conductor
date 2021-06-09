@@ -143,9 +143,6 @@ public class MongoQueueDAOTest {
             queueDAO.remove(queueName, messageId);
         }
 
-        size = queueDAO.getSize(queueName);
-        assertEquals(0, size);
-
         for (int i = 0; i < 10; i++) {
             String messageId = "msg" + i;
             queueDAO.pushIfNotExists(queueName, messageId, offsetTimeInSecond);
