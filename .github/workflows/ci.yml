@@ -39,16 +39,13 @@ jobs:
         run: |
           echo "Running build for commit ${{ github.sha }} in ${{ github.head_ref }}"
           ./gradlew build --scan
-      - name: Build and Publish snapshot
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - name: Publish package
         run: |
-          echo "Running build for commit ${{ github.sha }}"
-          ./gradlew build snapshot --scan
+          echo "Running publish for commit ${{ github.sha }} in ${{ github.head_ref }}"
+          ./gradlew publish
         env:
-          NETFLIX_OSS_SIGNING_KEY: ${{ secrets.ORG_SIGNING_KEY }}
-          NETFLIX_OSS_SIGNING_PASSWORD: ${{ secrets.ORG_SIGNING_PASSWORD }}
-          NETFLIX_OSS_REPO_USERNAME: ${{ secrets.ORG_NETFLIXOSS_USERNAME }}
-          NETFLIX_OSS_REPO_PASSWORD: ${{ secrets.ORG_NETFLIXOSS_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
