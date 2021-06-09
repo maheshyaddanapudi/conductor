@@ -139,9 +139,9 @@ task server {
 }
 
 sonarqube {
-    properties {
-        property "sonar.projectKey", "com.netflix.conductor:conductor"
-        property "sonar.organization", "netflix"
-        property "sonar.host.url", "https://sonarcloud.io"
-    }
+  properties {
+    property "sonar.projectKey", "maheshyaddanapudi_conductor"
+    property "sonar.organization", "maheshyaddanapudi"
+    property "sonar.host.url", "https://sonarcloud.io"
+  }
 }
