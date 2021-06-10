@@ -65,6 +65,23 @@ services:
         max-size: "1k"
         max-file: "3"
 
+  dynomite:
+    image: v1r3n/dynomite
+    networks:
+      - internal
+    ports:
+      - 8102:8102
+    healthcheck:
+      test: timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/8102'
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
   conductor-server:
     environment:
       - CONFIG_PROP=config-secure.properties
@@ -83,12 +100,12 @@ services:
       retries: 12
     links:
       - elasticsearch:es
-      - mysql:mysql
+      - dynomite:dyno1
       - keycloak:keycloak
     depends_on:
       elasticsearch:
         condition: service_healthy
-      mysql:
+      dynomite:
         condition: service_healthy
       keycloak:
         condition: service_healthy

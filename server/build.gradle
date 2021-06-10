@@ -57,7 +57,7 @@ jar {
 
 bootJar {
     mainClassName = 'com.netflix.conductor.Conductor'
-    classifier = 'secure-boot'
+    classifier = 'all-boot'
 }
 
 springBoot {
