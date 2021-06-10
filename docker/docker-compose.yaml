@@ -18,7 +18,7 @@ services:
       timeout: 30s
       retries: 12
     links:
-      - elasticsearch:es
+      - elasticsearch:elasticsearch
       - dynomite:dyno1
     depends_on:
       elasticsearch:
