@@ -1,0 +1,168 @@
+version: '2.3'
+
+services:
+  conductor-server:
+    environment:
+      - CONFIG_PROP=config.properties
+    image: conductor:server
+    build:
+      context: ../
+      dockerfile: docker/server/Dockerfile
+    networks:
+      - internal
+    ports:
+      - 8080:8080
+    healthcheck:
+      test: ["CMD", "curl","-I" ,"-XGET", "http://localhost:8080/health"]
+      interval: 60s
+      timeout: 30s
+      retries: 12
+    links:
+      - elasticsearch:es
+      - dynomite:dyno1
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      dynomite:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
+  dynomite:
+    image: v1r3n/dynomite
+    environment:
+      - LOGSPOUT=ignore
+    networks:
+      - internal
+    ports:
+      - 8102:8102
+    healthcheck:
+      test: timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/8102'
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
+  conductor-ui:
+    environment:
+      - WF_SERVER=http://conductor-server:8080/api/
+      - LOGSPOUT=ignore
+    image: conductor:ui
+    build:
+      context: ../
+      dockerfile: docker/ui/Dockerfile
+    networks:
+      - internal
+    ports:
+      - 5050:5000
+    links:
+      - conductor-server
+
+  elasticsearch:
+    image: elasticsearch:6.8.15
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx1024m"
+      - transport.host=0.0.0.0
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - LOGSPOUT=ignore
+    networks:
+      - internal
+    ports:
+      - 9200:9200
+      - 9300:9300
+    healthcheck:
+      test: timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/9300'
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
+  kibana:
+    image: kibana:6.8.15
+    restart: on-failure
+    links:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - LOGSPOUT=ignore
+    ports:
+      - 5601:5601
+    healthcheck:
+      test: [ "CMD", "curl","-I", "-XGET", "http://localhost:5601/status" ]
+      interval: 60s
+      timeout: 30s
+      retries: 15
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
+  logstash:
+    image: logstash:6.8.15
+    restart: on-failure
+    environment:
+      - STDOUT="true"
+      - LOGSPOUT=ignore
+      - http.host=0.0.0.0
+    ports:
+      - 5000:5000
+      - 9600:9600
+    links:
+      - elasticsearch
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: 'logstash -e "input { udp { port => 5000 } } filter { grok { match => { message => \"\A\[%{LOGLEVEL:LOG_LEVEL} ] %{TIMESTAMP_ISO8601:LOG_TIMESTAMP} \[%{NOTSPACE:THREAD}] %{NOTSPACE:JAVA_CLASS} - %{GREEDYDATA:LOG_MESSAGE}\" } } } output { elasticsearch { index => conductor_logs hosts => elasticsearch } }"'
+    networks:
+      - internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
+  logspout:
+    image: gliderlabs/logspout:v3
+    restart: on-failure
+    command: 'udp://logstash:5000'
+    links:
+      - logstash
+    volumes:
+      - '/var/run/docker.sock:/tmp/docker.sock'
+    environment:
+      LOGSPOUT: ignore
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_started
+      logstash:
+        condition: service_started
+    networks:
+      - internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+
+networks:
+  internal:
