@@ -12,9 +12,9 @@
  */
 package com.netflix.conductor.common.metadata.events;
 
-import com.github.vmg.protogen.annotations.ProtoEnum;
-import com.github.vmg.protogen.annotations.ProtoField;
-import com.github.vmg.protogen.annotations.ProtoMessage;
+import com.netflix.conductor.annotations.protogen.ProtoEnum;
+import com.netflix.conductor.annotations.protogen.ProtoField;
+import com.netflix.conductor.annotations.protogen.ProtoMessage;
 import com.google.protobuf.Any;
 import io.swagger.v3.oas.annotations.Hidden;
 
@@ -50,6 +50,9 @@ public class EventHandler {
 
     @ProtoField(id = 5)
     private boolean active;
+
+    @ProtoField(id = 6)
+    private String evaluatorType;
 
     public EventHandler() {
 
@@ -125,6 +128,19 @@ public class EventHandler {
         this.active = active;
     }
 
+    /**
+     * @return the evaluator type
+     */
+    public String getEvaluatorType() {
+        return evaluatorType;
+    }
+
+    /**
+     * @param evaluatorType the evaluatorType to set
+     */
+    public void setEvaluatorType(String evaluatorType) {
+        this.evaluatorType = evaluatorType;
+    }
 
     @ProtoMessage
     public static class Action {

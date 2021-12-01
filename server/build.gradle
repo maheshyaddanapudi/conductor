@@ -26,7 +26,9 @@ dependencies {
     implementation project(':conductor-postgres-persistence')
     implementation project(':conductor-mysql-persistence')
     implementation project(':conductor-es6-persistence')
+    implementation(project(path: ':conductor-es7-persistence', configuration: 'shadow'))
     implementation project(':conductor-grpc-server')
+    implementation project(':conductor-redis-lock')
 
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -39,7 +41,12 @@ dependencies {
 
     implementation "org.springdoc:springdoc-openapi-ui:${revOpenapi}"
 
+    implementation(group: 'com.rabbitmq', name: 'amqp-client'){ version{require "${revAmqpClient}"}}
+    runtimeOnly 'io.micrometer:micrometer-registry-datadog'
+
     runtimeOnly 'com.netflix.spectator:spectator-reg-micrometer'
+
+    runtimeOnly "org.glassfish.jaxb:jaxb-runtime:${revJAXB}"
 
     testImplementation project(':conductor-rest')
     testImplementation project(':conductor-common')
