@@ -41,6 +41,7 @@ dependencies {
     testImplementation "org.testcontainers:postgresql:${revTestContainer}"
     testImplementation "org.testcontainers:mongodb:${revTestContainer}"
     testImplementation "org.testcontainers:oracle-xe:${revTestContainer}"
+    testImplementation(group: 'com.rabbitmq', name: 'amqp-client'){ version{require "${revAmqpClient}"}}
 }
 
 test {
