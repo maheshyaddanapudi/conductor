@@ -23,11 +23,17 @@ import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.config.ConductorProperties;
 import com.netflix.conductor.core.exception.ApplicationException;
 import com.netflix.conductor.core.exception.ApplicationException.Code;
+import com.netflix.conductor.dao.ConcurrentExecutionLimitDAO;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.redis.config.AnyRedisCondition;
 import com.netflix.conductor.redis.config.RedisProperties;
 import com.netflix.conductor.redis.jedis.JedisProxy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.stereotype.Component;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -40,14 +46,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Conditional;
-import org.springframework.stereotype.Component;
 
 @Component
 @Conditional(AnyRedisCondition.class)
-public class RedisExecutionDAO extends BaseDynoDAO implements ExecutionDAO {
+public class RedisExecutionDAO extends BaseDynoDAO implements ExecutionDAO, ConcurrentExecutionLimitDAO {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(RedisExecutionDAO.class);
 
@@ -227,9 +229,9 @@ public class RedisExecutionDAO extends BaseDynoDAO implements ExecutionDAO {
     }
 
     @Override
-    public boolean exceedsInProgressLimit(Task task) {
+    public boolean exceedsLimit(Task task) {
         Optional<TaskDef> taskDefinition = task.getTaskDefinition();
-        if (!taskDefinition.isPresent()) {
+        if (taskDefinition.isEmpty()) {
             return false;
         }
         int limit = taskDefinition.get().concurrencyLimit();
@@ -276,6 +278,15 @@ public class RedisExecutionDAO extends BaseDynoDAO implements ExecutionDAO {
         jedisProxy.zrem(nsKey(TASK_LIMIT_BUCKET, task.getTaskDefName()), task.getTaskId());
     }
 
+    private void removeTaskMappingsWithExpiry(Task task) {
+        String taskKey = task.getReferenceTaskName() + "" + task.getRetryCount();
+
+        jedisProxy.hdel(nsKey(SCHEDULED_TASKS, task.getWorkflowInstanceId()), taskKey);
+        jedisProxy.srem(nsKey(IN_PROGRESS_TASKS, task.getTaskDefName()), task.getTaskId());
+        jedisProxy.srem(nsKey(TASKS_IN_PROGRESS_STATUS, task.getTaskDefName()), task.getTaskId());
+        jedisProxy.zrem(nsKey(TASK_LIMIT_BUCKET, task.getTaskDefName()), task.getTaskId());
+    }
+
     @Override
     public boolean removeTask(String taskId) {
         Task task = getTask(taskId);
@@ -296,7 +307,7 @@ public class RedisExecutionDAO extends BaseDynoDAO implements ExecutionDAO {
             LOGGER.warn("No such task found by id {}", taskId);
             return false;
         }
-        removeTaskMappings(task);
+        removeTaskMappingsWithExpiry(task);
 
         jedisProxy.expire(nsKey(TASK, task.getTaskId()), ttlSeconds);
         recordRedisDaoRequests("removeTask", task.getTaskType(), task.getWorkflowType());
@@ -397,6 +408,8 @@ public class RedisExecutionDAO extends BaseDynoDAO implements ExecutionDAO {
             for (Task task : workflow.getTasks()) {
                 removeTaskWithExpiry(task.getTaskId(), ttlSeconds);
             }
+            jedisProxy.expire(nsKey(WORKFLOW_TO_TASKS, workflowId), ttlSeconds);
+
             return true;
         }
         return false;

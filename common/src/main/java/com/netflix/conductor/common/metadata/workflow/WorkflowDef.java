@@ -12,9 +12,9 @@
  */
 package com.netflix.conductor.common.metadata.workflow;
 
-import com.github.vmg.protogen.annotations.ProtoEnum;
-import com.github.vmg.protogen.annotations.ProtoField;
-import com.github.vmg.protogen.annotations.ProtoMessage;
+import com.netflix.conductor.annotations.protogen.ProtoEnum;
+import com.netflix.conductor.annotations.protogen.ProtoField;
+import com.netflix.conductor.annotations.protogen.ProtoMessage;
 import com.netflix.conductor.common.constraints.NoSemiColonConstraint;
 import com.netflix.conductor.common.constraints.OwnerEmailMandatoryConstraint;
 import com.netflix.conductor.common.constraints.TaskReferenceNameUniqueConstraint;
@@ -92,6 +92,9 @@ public class WorkflowDef extends Auditable {
 
     @ProtoField(id = 14)
     private Map<String, Object> variables = new HashMap<>();
+
+    @ProtoField(id = 15)
+    private Map<String, Object> inputTemplate = new HashMap<>();
 
     /**
      * @return the name
@@ -293,6 +296,14 @@ public class WorkflowDef extends Auditable {
      */
     public void setVariables(Map<String, Object> variables) {
         this.variables = variables;
+    }
+
+    public Map<String, Object> getInputTemplate() {
+        return inputTemplate;
+    }
+
+    public void setInputTemplate(Map<String, Object> inputTemplate) {
+        this.inputTemplate = inputTemplate;
     }
 
     public String key() {
