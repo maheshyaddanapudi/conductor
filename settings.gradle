@@ -29,6 +29,9 @@ gradleEnterprise {
 
 rootProject.name = 'conductor'
 
+include 'annotations'
+include 'annotations-processor'
+
 include 'server'
 include 'common'
 include 'core'
@@ -43,11 +46,14 @@ include 'postgres-persistence'
 include 'oracle-persistence'
 
 include 'es6-persistence'
+include 'es7-persistence'
 
 include 'redis-lock'
 include 'zookeeper-lock'
 
 include 'azureblob-storage'
+
+include 'redis-concurrency-limit'
 
 include 'rest'
 include 'grpc'
