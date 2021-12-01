@@ -12,9 +12,9 @@
  */
 package com.netflix.conductor.common.run;
 
-import com.github.vmg.protogen.annotations.ProtoEnum;
-import com.github.vmg.protogen.annotations.ProtoField;
-import com.github.vmg.protogen.annotations.ProtoMessage;
+import com.netflix.conductor.annotations.protogen.ProtoEnum;
+import com.netflix.conductor.annotations.protogen.ProtoField;
+import com.netflix.conductor.annotations.protogen.ProtoMessage;
 import com.google.common.base.Preconditions;
 import com.netflix.conductor.common.metadata.Auditable;
 import com.netflix.conductor.common.metadata.tasks.Task;
@@ -213,6 +213,9 @@ public class Workflow extends Auditable {
      * @param input the input to set
      */
     public void setInput(Map<String, Object> input) {
+        if (input == null) {
+            input = new HashMap<>();
+        }
         this.input = input;
     }
 
@@ -241,6 +244,9 @@ public class Workflow extends Auditable {
      * @param output the output to set
      */
     public void setOutput(Map<String, Object> output) {
+        if (output == null) {
+            output = new HashMap<>();
+        }
         this.output = output;
     }
 
