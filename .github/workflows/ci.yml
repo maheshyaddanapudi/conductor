@@ -37,7 +37,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          echo "Running build for commit ${{ github.sha }} in ${{ github.head_ref }}"
           ./gradlew build -x :conductor-contribs:test --scan
       - name: Build and Publish snapshot
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -65,3 +64,18 @@ jobs:
         with:
           name: build-scan
           path: 'buildscan.log'
+  build-ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - name: Install dependencies
+        run: yarn install
+      - run: yarn run build
+
