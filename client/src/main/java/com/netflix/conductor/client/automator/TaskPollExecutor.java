@@ -14,12 +14,14 @@ package com.netflix.conductor.client.automator;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
@@ -36,6 +38,9 @@ import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
 import com.netflix.conductor.common.utils.RetryUtil;
 import com.netflix.discovery.EurekaClient;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.patterns.ThreadPoolMonitor;
 
 import com.google.common.base.Stopwatch;
 
@@ -47,11 +52,13 @@ class TaskPollExecutor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskPollExecutor.class);
 
+    private static final Registry REGISTRY = Spectator.globalRegistry();
+
     private final EurekaClient eurekaClient;
     private final TaskClient taskClient;
     private final int updateRetryCount;
     private final ExecutorService executorService;
-    private final PollingSemaphore pollingSemaphore;
+    private final Map<String, PollingSemaphore> pollingSemaphoreMap;
     private final Map<String /*taskType*/, String /*domain*/> taskToDomain;
 
     private static final String DOMAIN = "domain";
@@ -64,23 +71,37 @@ class TaskPollExecutor {
             int threadCount,
             int updateRetryCount,
             Map<String, String> taskToDomain,
-            String workerNamePrefix) {
+            String workerNamePrefix,
+            Map<String, Integer> taskThreadCount) {
         this.eurekaClient = eurekaClient;
         this.taskClient = taskClient;
         this.updateRetryCount = updateRetryCount;
         this.taskToDomain = taskToDomain;
 
-        LOGGER.info("Initialized the TaskPollExecutor with {} threads", threadCount);
+        this.pollingSemaphoreMap = new HashMap<>();
+        int totalThreadCount = 0;
+        if (!taskThreadCount.isEmpty()) {
+            for (Map.Entry<String, Integer> entry : taskThreadCount.entrySet()) {
+                String taskType = entry.getKey();
+                int count = entry.getValue();
+                totalThreadCount += count;
+                pollingSemaphoreMap.put(taskType, new PollingSemaphore(count));
+            }
+        } else {
+            totalThreadCount = threadCount;
+            // shared poll for all workers
+            pollingSemaphoreMap.put(ALL_WORKERS, new PollingSemaphore(threadCount));
+        }
 
+        LOGGER.info("Initialized the TaskPollExecutor with {} threads", totalThreadCount);
         this.executorService =
                 Executors.newFixedThreadPool(
-                        threadCount,
+                        totalThreadCount,
                         new BasicThreadFactory.Builder()
                                 .namingPattern(workerNamePrefix)
                                 .uncaughtExceptionHandler(uncaughtExceptionHandler)
                                 .build());
-
-        this.pollingSemaphore = new PollingSemaphore(threadCount);
+        ThreadPoolMonitor.attach(REGISTRY, (ThreadPoolExecutor) executorService, workerNamePrefix);
     }
 
     void pollAndExecute(Worker worker) {
@@ -106,13 +127,15 @@ class TaskPollExecutor {
             return;
         }
 
+        String taskType = worker.getTaskDefName();
+        PollingSemaphore pollingSemaphore = getPollingSemaphore(taskType);
+
         Task task;
         try {
             if (!pollingSemaphore.canPoll()) {
                 return;
             }
 
-            String taskType = worker.getTaskDefName();
             String domain =
                     Optional.ofNullable(PropertyFactory.getString(taskType, DOMAIN, null))
                             .orElseGet(
@@ -141,7 +164,7 @@ class TaskPollExecutor {
 
                 CompletableFuture<Task> taskCompletableFuture =
                         CompletableFuture.supplyAsync(
-                                () -> processTask(task, worker), executorService);
+                                () -> processTask(task, worker, pollingSemaphore), executorService);
 
                 taskCompletableFuture.whenComplete(this::finalizeTask);
             } else {
@@ -181,7 +204,7 @@ class TaskPollExecutor {
                 LOGGER.error("Uncaught exception. Thread {} will exit now", thread, error);
             };
 
-    private Task processTask(Task task, Worker worker) {
+    private Task processTask(Task task, Worker worker, PollingSemaphore pollingSemaphore) {
         LOGGER.debug(
                 "Executing task: {} of type: {} in worker: {} at {}",
                 task.getTaskId(),
@@ -316,5 +339,13 @@ class TaskPollExecutor {
         result.log(stringWriter.toString());
 
         updateWithRetry(updateRetryCount, task, result, worker);
+    }
+
+    private PollingSemaphore getPollingSemaphore(String taskType) {
+        if (pollingSemaphoreMap.containsKey(taskType)) {
+            return pollingSemaphoreMap.get(taskType);
+        } else {
+            return pollingSemaphoreMap.get(ALL_WORKERS);
+        }
     }
 }
