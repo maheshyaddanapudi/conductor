@@ -1,9 +1,12 @@
 import React from "react";
 import _ from "lodash";
 import { NavLink, KeyValueTable } from "../../components";
+import { useTime } from "../../hooks/useTime";
 
 export default function TaskSummary({ taskResult }) {
-  // To accommodate unexecuted tasks, read type & name & ref out of workflowTask
+  const now = useTime();
+
+  // To accommodate unexecuted tasks, read type & name & ref out of workflow
   const data = [
     { label: "Task Type", value: taskResult.workflowTask.type },
     { label: "Status", value: taskResult.status || "Not executed" },
@@ -51,6 +54,13 @@ export default function TaskSummary({ taskResult }) {
       type: "duration",
     });
   }
+  if (taskResult.startTime && taskResult.status === "IN_PROGRESS") {
+    data.push({
+      label: "Current Elapsed Time",
+      value: taskResult.startTime > 0 && now - taskResult.startTime,
+      type: "duration",
+    });
+  }
   if (!_.isNil(taskResult.retrycount)) {
     data.push({ label: "Retry Count", value: taskResult.retryCount });
   }
@@ -61,7 +71,11 @@ export default function TaskSummary({ taskResult }) {
     });
   }
   if (taskResult.workerId) {
-    data.push({ label: "Worker", value: taskResult.workerId });
+    data.push({
+      label: "Worker",
+      value: taskResult.workerId,
+      type: "workerId",
+    });
   }
   if (taskResult.taskType === "DECISION") {
     data.push({
@@ -75,7 +89,7 @@ export default function TaskSummary({ taskResult }) {
       value: (
         <NavLink
           newTab
-          path={`/definition/${taskResult.workflowTask.subWorkflowParam.name}`}
+          path={`/workflowDef/${taskResult.workflowTask.subWorkflowParam.name}`}
         >
           {taskResult.workflowTask.subWorkflowParam.name}{" "}
         </NavLink>
@@ -95,5 +109,13 @@ export default function TaskSummary({ taskResult }) {
       });
     }
   }
+
+  if (taskResult.externalOutputPayloadStoragePath) {
+    data.push({
+      label: "External Output",
+      value: taskResult.externalOutputPayloadStoragePath,
+    });
+  }
+
   return <KeyValueTable data={data} />;
 }
