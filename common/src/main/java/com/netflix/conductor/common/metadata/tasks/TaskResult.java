@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -26,6 +26,7 @@ import com.netflix.conductor.annotations.protogen.ProtoField;
 import com.netflix.conductor.annotations.protogen.ProtoMessage;
 
 import com.google.protobuf.Any;
+import io.swagger.v3.oas.annotations.Hidden;
 
 /** Result of the task execution. */
 @ProtoMessage
@@ -63,6 +64,7 @@ public class TaskResult {
     private Map<String, Object> outputData = new HashMap<>();
 
     @ProtoField(id = 8)
+    @Hidden
     private Any outputMessage;
 
     private List<TaskExecLog> logs = new CopyOnWriteArrayList<>();

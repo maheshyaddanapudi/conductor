@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -28,14 +28,15 @@ import com.netflix.conductor.common.metadata.events.EventHandler.Action;
 import com.netflix.conductor.common.metadata.events.EventHandler.Action.Type;
 import com.netflix.conductor.common.metadata.events.EventHandler.StartWorkflow;
 import com.netflix.conductor.common.metadata.events.EventHandler.TaskDetails;
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
 import com.netflix.conductor.common.metadata.tasks.TaskResult.Status;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
-import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
+import com.netflix.conductor.core.utils.ExternalPayloadStorageUtils;
 import com.netflix.conductor.core.utils.JsonUtils;
 import com.netflix.conductor.core.utils.ParametersUtils;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,12 +58,15 @@ import static org.mockito.Mockito.when;
 public class TestSimpleActionProcessor {
 
     private WorkflowExecutor workflowExecutor;
+    private ExternalPayloadStorageUtils externalPayloadStorageUtils;
     private SimpleActionProcessor actionProcessor;
 
     @Autowired private ObjectMapper objectMapper;
 
     @Before
     public void setup() {
+        externalPayloadStorageUtils = mock(ExternalPayloadStorageUtils.class);
+
         workflowExecutor = mock(WorkflowExecutor.class);
 
         actionProcessor =
@@ -71,7 +76,7 @@ public class TestSimpleActionProcessor {
                         new JsonUtils(objectMapper));
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     public void testStartWorkflow_correlationId() throws Exception {
         StartWorkflow startWorkflow = new StartWorkflow();
@@ -203,12 +208,60 @@ public class TestSimpleActionProcessor {
                 "{\"workflowId\":\"workflow_1\",\"Message\":{\"someKey\":\"someData\",\"someNullKey\":null}}";
         Object payload = objectMapper.readValue(payloadJson, Object.class);
 
-        Task task = new Task();
+        TaskModel task = new TaskModel();
         task.setReferenceTaskName("testTask");
-        Workflow workflow = new Workflow();
+        WorkflowModel workflow = new WorkflowModel();
         workflow.getTasks().add(task);
 
         when(workflowExecutor.getWorkflow(eq("workflow_1"), anyBoolean())).thenReturn(workflow);
+        doNothing().when(externalPayloadStorageUtils).verifyAndUpload(any(), any());
+
+        actionProcessor.execute(action, payload, "testEvent", "testMessage");
+
+        ArgumentCaptor<TaskResult> argumentCaptor = ArgumentCaptor.forClass(TaskResult.class);
+        verify(workflowExecutor).updateTask(argumentCaptor.capture());
+        assertEquals(Status.COMPLETED, argumentCaptor.getValue().getStatus());
+        assertEquals(
+                "testMessage",
+                argumentCaptor.getValue().getOutputData().get("conductor.event.messageId"));
+        assertEquals(
+                "testEvent", argumentCaptor.getValue().getOutputData().get("conductor.event.name"));
+        assertEquals("workflow_1", argumentCaptor.getValue().getOutputData().get("workflowId"));
+        assertEquals("testTask", argumentCaptor.getValue().getOutputData().get("taskRefName"));
+        assertEquals("someData", argumentCaptor.getValue().getOutputData().get("someKey"));
+        // Assert values not in message are evaluated to null
+        assertTrue("testTask", argumentCaptor.getValue().getOutputData().containsKey("someNEKey"));
+        // Assert null values from message are kept
+        assertTrue(
+                "testTask", argumentCaptor.getValue().getOutputData().containsKey("someNullKey"));
+        assertNull("testTask", argumentCaptor.getValue().getOutputData().get("someNullKey"));
+    }
+
+    @Test
+    public void testCompleteLoopOverTask() throws Exception {
+        TaskDetails taskDetails = new TaskDetails();
+        taskDetails.setWorkflowId("${workflowId}");
+        taskDetails.setTaskRefName("testTask");
+        taskDetails.getOutput().put("someNEKey", "${Message.someNEKey}");
+        taskDetails.getOutput().put("someKey", "${Message.someKey}");
+        taskDetails.getOutput().put("someNullKey", "${Message.someNullKey}");
+
+        Action action = new Action();
+        action.setAction(Type.complete_task);
+        action.setComplete_task(taskDetails);
+
+        String payloadJson =
+                "{\"workflowId\":\"workflow_1\",  \"taskRefName\":\"testTask\", \"Message\":{\"someKey\":\"someData\",\"someNullKey\":null}}";
+        Object payload = objectMapper.readValue(payloadJson, Object.class);
+
+        TaskModel task = new TaskModel();
+        task.setIteration(1);
+        task.setReferenceTaskName("testTask__1");
+        WorkflowModel workflow = new WorkflowModel();
+        workflow.getTasks().add(task);
+
+        when(workflowExecutor.getWorkflow(eq("workflow_1"), anyBoolean())).thenReturn(workflow);
+        doNothing().when(externalPayloadStorageUtils).verifyAndUpload(any(), any());
 
         actionProcessor.execute(action, payload, "testEvent", "testMessage");
 
@@ -245,11 +298,12 @@ public class TestSimpleActionProcessor {
                 objectMapper.readValue(
                         "{\"workflowId\":\"workflow_1\", \"taskId\":\"task_1\"}", Object.class);
 
-        Task task = new Task();
+        TaskModel task = new TaskModel();
         task.setTaskId("task_1");
         task.setReferenceTaskName("testTask");
 
         when(workflowExecutor.getTask(eq("task_1"))).thenReturn(task);
+        doNothing().when(externalPayloadStorageUtils).verifyAndUpload(any(), any());
 
         actionProcessor.execute(action, payload, "testEvent", "testMessage");
 

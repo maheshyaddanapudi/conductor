@@ -12,9 +12,12 @@
  */
 package com.netflix.conductor.core.events;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -24,14 +27,14 @@ import org.springframework.stereotype.Component;
 import com.netflix.conductor.common.metadata.events.EventHandler.Action;
 import com.netflix.conductor.common.metadata.events.EventHandler.StartWorkflow;
 import com.netflix.conductor.common.metadata.events.EventHandler.TaskDetails;
-import com.netflix.conductor.common.metadata.tasks.Task;
-import com.netflix.conductor.common.metadata.tasks.Task.Status;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
-import com.netflix.conductor.common.run.Workflow;
+import com.netflix.conductor.common.utils.TaskUtils;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.utils.JsonUtils;
 import com.netflix.conductor.core.utils.ParametersUtils;
 import com.netflix.conductor.metrics.Monitors;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
 /**
  * Action Processor subscribes to the Event Actions queue and processes the actions (e.g. start
@@ -77,12 +80,17 @@ public class SimpleActionProcessor implements ActionProcessor {
                         action,
                         jsonObject,
                         action.getComplete_task(),
-                        Status.COMPLETED,
+                        TaskModel.Status.COMPLETED,
                         event,
                         messageId);
             case fail_task:
                 return completeTask(
-                        action, jsonObject, action.getFail_task(), Status.FAILED, event, messageId);
+                        action,
+                        jsonObject,
+                        action.getFail_task(),
+                        TaskModel.Status.FAILED,
+                        event,
+                        messageId);
             default:
                 break;
         }
@@ -94,7 +102,7 @@ public class SimpleActionProcessor implements ActionProcessor {
             Action action,
             Object payload,
             TaskDetails taskDetails,
-            Status status,
+            TaskModel.Status status,
             String event,
             String messageId) {
 
@@ -109,19 +117,36 @@ public class SimpleActionProcessor implements ActionProcessor {
         String taskId = (String) replaced.get("taskId");
         String taskRefName = (String) replaced.get("taskRefName");
 
-        Task task = null;
+        TaskModel taskModel = null;
         if (StringUtils.isNotEmpty(taskId)) {
-            task = workflowExecutor.getTask(taskId);
+            taskModel = workflowExecutor.getTask(taskId);
         } else if (StringUtils.isNotEmpty(workflowId) && StringUtils.isNotEmpty(taskRefName)) {
-            Workflow workflow = workflowExecutor.getWorkflow(workflowId, true);
+            WorkflowModel workflow = workflowExecutor.getWorkflow(workflowId, true);
             if (workflow == null) {
                 replaced.put("error", "No workflow found with ID: " + workflowId);
                 return replaced;
             }
-            task = workflow.getTaskByRefName(taskRefName);
+            taskModel = workflow.getTaskByRefName(taskRefName);
+            // Task can be loopover task.In such case find corresponding task and update
+            List<TaskModel> loopOverTaskList =
+                    workflow.getTasks().stream()
+                            .filter(
+                                    t ->
+                                            TaskUtils.removeIterationFromTaskRefName(
+                                                            t.getReferenceTaskName())
+                                                    .equals(taskRefName))
+                            .collect(Collectors.toList());
+            if (!loopOverTaskList.isEmpty()) {
+                // Find loopover task with the highest iteration value
+                taskModel =
+                        loopOverTaskList.stream()
+                                .sorted(Comparator.comparingInt(TaskModel::getIteration).reversed())
+                                .findFirst()
+                                .get();
+            }
         }
 
-        if (task == null) {
+        if (taskModel == null) {
             replaced.put(
                     "error",
                     "No task found with taskId: "
@@ -133,14 +158,14 @@ public class SimpleActionProcessor implements ActionProcessor {
             return replaced;
         }
 
-        task.setStatus(status);
-        task.setOutputData(replaced);
-        task.setOutputMessage(taskDetails.getOutputMessage());
-        task.getOutputData().put("conductor.event.messageId", messageId);
-        task.getOutputData().put("conductor.event.name", event);
+        taskModel.setStatus(status);
+        taskModel.setOutputData(replaced);
+        taskModel.setOutputMessage(taskDetails.getOutputMessage());
+        taskModel.getOutputData().put("conductor.event.messageId", messageId);
+        taskModel.getOutputData().put("conductor.event.name", event);
 
         try {
-            workflowExecutor.updateTask(new TaskResult(task));
+            workflowExecutor.updateTask(new TaskResult(taskModel.toTask()));
             LOGGER.debug(
                     "Updated task: {} in workflow:{} with status: {} for event: {} for message:{}",
                     taskId,
@@ -149,7 +174,8 @@ public class SimpleActionProcessor implements ActionProcessor {
                     event,
                     messageId);
         } catch (RuntimeException e) {
-            Monitors.recordEventActionError(action.getAction().name(), task.getTaskType(), event);
+            Monitors.recordEventActionError(
+                    action.getAction().name(), taskModel.getTaskType(), event);
             LOGGER.error(
                     "Error updating task: {} in workflow: {} in action: {} for event: {} for message: {}",
                     taskDetails.getTaskRefName(),

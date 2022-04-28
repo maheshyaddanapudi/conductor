@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,7 +12,6 @@
  */
 package com.netflix.conductor.core.execution.mapper;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -21,11 +20,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskType;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
-import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.utils.ParametersUtils;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
 import static com.netflix.conductor.common.metadata.tasks.TaskType.TASK_TYPE_EVENT;
 
@@ -47,38 +46,30 @@ public class EventTaskMapper implements TaskMapper {
     }
 
     @Override
-    public List<Task> getMappedTasks(TaskMapperContext taskMapperContext) {
+    public List<TaskModel> getMappedTasks(TaskMapperContext taskMapperContext) {
 
         LOGGER.debug("TaskMapperContext {} in EventTaskMapper", taskMapperContext);
 
-        WorkflowTask taskToSchedule = taskMapperContext.getTaskToSchedule();
-        Workflow workflowInstance = taskMapperContext.getWorkflowInstance();
+        WorkflowTask workflowTask = taskMapperContext.getWorkflowTask();
+        WorkflowModel workflowModel = taskMapperContext.getWorkflowModel();
         String taskId = taskMapperContext.getTaskId();
 
-        taskToSchedule.getInputParameters().put("sink", taskToSchedule.getSink());
-        taskToSchedule.getInputParameters().put("asyncComplete", taskToSchedule.isAsyncComplete());
+        workflowTask.getInputParameters().put("sink", workflowTask.getSink());
+        workflowTask.getInputParameters().put("asyncComplete", workflowTask.isAsyncComplete());
         Map<String, Object> eventTaskInput =
                 parametersUtils.getTaskInputV2(
-                        taskToSchedule.getInputParameters(), workflowInstance, taskId, null);
+                        workflowTask.getInputParameters(), workflowModel, taskId, null);
         String sink = (String) eventTaskInput.get("sink");
         Boolean asynComplete = (Boolean) eventTaskInput.get("asyncComplete");
 
-        Task eventTask = new Task();
+        TaskModel eventTask = taskMapperContext.createTaskModel();
         eventTask.setTaskType(TASK_TYPE_EVENT);
-        eventTask.setTaskDefName(taskToSchedule.getName());
-        eventTask.setReferenceTaskName(taskToSchedule.getTaskReferenceName());
-        eventTask.setWorkflowInstanceId(workflowInstance.getWorkflowId());
-        eventTask.setWorkflowType(workflowInstance.getWorkflowName());
-        eventTask.setCorrelationId(workflowInstance.getCorrelationId());
-        eventTask.setScheduledTime(System.currentTimeMillis());
+        eventTask.setStatus(TaskModel.Status.SCHEDULED);
+
         eventTask.setInputData(eventTaskInput);
         eventTask.getInputData().put("sink", sink);
         eventTask.getInputData().put("asyncComplete", asynComplete);
-        eventTask.setTaskId(taskId);
-        eventTask.setStatus(Task.Status.SCHEDULED);
-        eventTask.setWorkflowPriority(workflowInstance.getPriority());
-        eventTask.setWorkflowTask(taskToSchedule);
 
-        return Collections.singletonList(eventTask);
+        return List.of(eventTask);
     }
 }

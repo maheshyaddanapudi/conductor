@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -22,20 +22,22 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import com.netflix.conductor.common.metadata.events.EventExecution;
 import com.netflix.conductor.common.metadata.events.EventExecution.Status;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.events.EventHandler.Action;
-import com.netflix.conductor.common.utils.RetryUtil;
 import com.netflix.conductor.core.config.ConductorProperties;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.core.events.queue.ObservableQueue;
-import com.netflix.conductor.core.exception.ApplicationException;
 import com.netflix.conductor.core.execution.evaluators.Evaluator;
 import com.netflix.conductor.core.utils.JsonUtils;
 import com.netflix.conductor.metrics.Monitors;
@@ -43,8 +45,9 @@ import com.netflix.conductor.service.ExecutionService;
 import com.netflix.conductor.service.MetadataService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.spotify.futures.CompletableFutures;
+
+import static com.netflix.conductor.core.utils.Utils.isTransientException;
 
 /**
  * Event Processor is used to dispatch actions configured in the event handlers, based on incoming
@@ -60,7 +63,6 @@ import com.spotify.futures.CompletableFutures;
 public class DefaultEventProcessor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultEventProcessor.class);
-    private static final int RETRY_COUNT = 3;
 
     private final MetadataService metadataService;
     private final ExecutionService executionService;
@@ -71,6 +73,7 @@ public class DefaultEventProcessor {
     private final JsonUtils jsonUtils;
     private final boolean isEventMessageIndexingEnabled;
     private final Map<String, Evaluator> evaluators;
+    private final RetryTemplate retryTemplate;
 
     public DefaultEventProcessor(
             ExecutionService executionService,
@@ -79,7 +82,8 @@ public class DefaultEventProcessor {
             JsonUtils jsonUtils,
             ConductorProperties properties,
             ObjectMapper objectMapper,
-            Map<String, Evaluator> evaluators) {
+            Map<String, Evaluator> evaluators,
+            @Qualifier("onTransientErrorRetryTemplate") RetryTemplate retryTemplate) {
         this.executionService = executionService;
         this.metadataService = metadataService;
         this.actionProcessor = actionProcessor;
@@ -93,38 +97,43 @@ public class DefaultEventProcessor {
                             + "processing, set conductor.default-event-processor.enabled=false.");
         }
         ThreadFactory threadFactory =
-                new ThreadFactoryBuilder().setNameFormat("event-action-executor-thread-%d").build();
+                new BasicThreadFactory.Builder()
+                        .namingPattern("event-action-executor-thread-%d")
+                        .build();
         eventActionExecutorService =
                 Executors.newFixedThreadPool(
                         properties.getEventProcessorThreadCount(), threadFactory);
 
         this.isEventMessageIndexingEnabled = properties.isEventMessageIndexingEnabled();
+        this.retryTemplate = retryTemplate;
         LOGGER.info("Event Processing is ENABLED");
     }
 
     public void handle(ObservableQueue queue, Message msg) {
+        List<EventExecution> transientFailures = null;
+        Boolean executionFailed = false;
         try {
             if (isEventMessageIndexingEnabled) {
                 executionService.addMessage(queue.getName(), msg);
             }
             String event = queue.getType() + ":" + queue.getName();
             LOGGER.debug("Evaluating message: {} for event: {}", msg.getId(), event);
-            List<EventExecution> transientFailures = executeEvent(event, msg);
-
-            if (transientFailures.isEmpty()) {
+            transientFailures = executeEvent(event, msg);
+        } catch (Exception e) {
+            executionFailed = true;
+            LOGGER.error("Error handling message: {} on queue:{}", msg, queue.getName(), e);
+            Monitors.recordEventQueueMessagesError(queue.getType(), queue.getName());
+        } finally {
+            if (executionFailed || CollectionUtils.isEmpty(transientFailures)) {
                 queue.ack(Collections.singletonList(msg));
                 LOGGER.debug("Message: {} acked on queue: {}", msg.getId(), queue.getName());
             } else if (queue.rePublishIfNoAck()) {
                 // re-submit this message to the queue, to be retried later
-                // This is needed for queues with no unack timeout, since messages are removed from
-                // the queue
+                // This is needed for queues with no unack timeout, since messages are removed
+                // from the queue
                 queue.publish(Collections.singletonList(msg));
                 LOGGER.debug("Message: {} published to queue: {}", msg.getId(), queue.getName());
             }
-        } catch (Exception e) {
-            LOGGER.error("Error handling message: {} on queue:{}", msg, queue.getName(), e);
-            Monitors.recordEventQueueMessagesError(queue.getType(), queue.getName());
-        } finally {
             Monitors.recordEventQueueMessagesHandled(queue.getType(), queue.getName());
         }
     }
@@ -144,8 +153,8 @@ public class DefaultEventProcessor {
         for (EventHandler eventHandler : eventHandlerList) {
             String condition = eventHandler.getCondition();
             String evaluatorType = eventHandler.getEvaluatorType();
-            // Set default to true so that if condition is not specified, it falls through to
-            // process the event.
+            // Set default to true so that if condition is not specified, it falls through
+            // to process the event.
             Boolean success = true;
             if (StringUtils.isNotEmpty(condition) && evaluators.get(evaluatorType) != null) {
                 Object result =
@@ -251,30 +260,21 @@ public class DefaultEventProcessor {
      */
     protected EventExecution execute(EventExecution eventExecution, Action action, Object payload) {
         try {
-            String methodName = "executeEventAction";
-            String description =
-                    String.format(
-                            "Executing action: %s for event: %s with messageId: %s with payload: %s",
-                            action.getAction(),
-                            eventExecution.getId(),
-                            eventExecution.getMessageId(),
-                            payload);
-            LOGGER.debug(description);
+            LOGGER.debug(
+                    "Executing action: {} for event: {} with messageId: {} with payload: {}",
+                    action.getAction(),
+                    eventExecution.getId(),
+                    eventExecution.getMessageId(),
+                    payload);
 
             Map<String, Object> output =
-                    new RetryUtil<Map<String, Object>>()
-                            .retryOnException(
-                                    () ->
-                                            actionProcessor.execute(
-                                                    action,
-                                                    payload,
-                                                    eventExecution.getEvent(),
-                                                    eventExecution.getMessageId()),
-                                    this::isTransientException,
-                                    null,
-                                    RETRY_COUNT,
-                                    description,
-                                    methodName);
+                    retryTemplate.execute(
+                            context ->
+                                    actionProcessor.execute(
+                                            action,
+                                            payload,
+                                            eventExecution.getEvent(),
+                                            eventExecution.getMessageId()));
             if (output != null) {
                 eventExecution.getOutput().putAll(output);
             }
@@ -290,7 +290,7 @@ public class DefaultEventProcessor {
                     eventExecution.getEvent(),
                     eventExecution.getMessageId(),
                     e);
-            if (!isTransientException(e.getCause())) {
+            if (!isTransientException(e)) {
                 // not a transient error, fail the event execution
                 eventExecution.setStatus(Status.FAILED);
                 eventExecution.getOutput().put("exception", e.getMessage());
@@ -302,24 +302,6 @@ public class DefaultEventProcessor {
             }
         }
         return eventExecution;
-    }
-
-    /**
-     * Used to determine if the exception is thrown due to a transient failure and the operation is
-     * expected to succeed upon retrying.
-     *
-     * @param throwableException the exception that is thrown
-     * @return true - if the exception is a transient failure false - if the exception is
-     *     non-transient
-     */
-    protected boolean isTransientException(Throwable throwableException) {
-        if (throwableException != null) {
-            return !((throwableException instanceof UnsupportedOperationException)
-                    || (throwableException instanceof ApplicationException
-                            && ((ApplicationException) throwableException).getCode()
-                                    != ApplicationException.Code.BACKEND_ERROR));
-        }
-        return true;
     }
 
     private Object getPayloadObject(String payload) {

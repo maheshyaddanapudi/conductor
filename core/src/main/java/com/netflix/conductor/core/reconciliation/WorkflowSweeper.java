@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -29,9 +29,8 @@ import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.metrics.Monitors;
 
 import static com.netflix.conductor.core.config.SchedulerConfiguration.SWEEPER_EXECUTOR_NAME;
-import static com.netflix.conductor.core.execution.WorkflowExecutor.DECIDER_QUEUE;
+import static com.netflix.conductor.core.utils.Utils.DECIDER_QUEUE;
 
-@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Component
 public class WorkflowSweeper {
 
@@ -77,11 +76,7 @@ public class WorkflowSweeper {
             boolean done = workflowExecutor.decide(workflowId);
             if (done) {
                 queueDAO.remove(DECIDER_QUEUE, workflowId);
-            } else {
-                queueDAO.setUnackTimeout(
-                        DECIDER_QUEUE,
-                        workflowId,
-                        properties.getWorkflowOffsetTimeout().toMillis());
+                return;
             }
         } catch (ApplicationException e) {
             if (e.getCode() == ApplicationException.Code.NOT_FOUND) {
@@ -90,12 +85,13 @@ public class WorkflowSweeper {
                         "Workflow NOT found for id:{}. Removed it from decider queue",
                         workflowId,
                         e);
+                return;
             }
         } catch (Exception e) {
-            queueDAO.setUnackTimeout(
-                    DECIDER_QUEUE, workflowId, properties.getWorkflowOffsetTimeout().toMillis());
             Monitors.error(CLASS_NAME, "sweep");
             LOGGER.error("Error running sweep for " + workflowId, e);
         }
+        queueDAO.setUnackTimeout(
+                DECIDER_QUEUE, workflowId, properties.getWorkflowOffsetTimeout().toMillis());
     }
 }

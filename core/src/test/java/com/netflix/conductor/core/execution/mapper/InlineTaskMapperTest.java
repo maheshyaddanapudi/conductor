@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -17,16 +17,16 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.tasks.TaskType;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
-import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.execution.evaluators.JavascriptEvaluator;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.core.utils.ParametersUtils;
 import com.netflix.conductor.dao.MetadataDAO;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -46,32 +46,31 @@ public class InlineTaskMapperTest {
     @Test
     public void getMappedTasks() {
 
-        WorkflowTask taskToSchedule = new WorkflowTask();
-        taskToSchedule.setName("inline_task");
-        taskToSchedule.setType(TaskType.INLINE.name());
-        taskToSchedule.setTaskDefinition(new TaskDef("inline_task"));
-        taskToSchedule.setEvaluatorType(JavascriptEvaluator.NAME);
-        taskToSchedule.setExpression(
+        WorkflowTask workflowTask = new WorkflowTask();
+        workflowTask.setName("inline_task");
+        workflowTask.setType(TaskType.INLINE.name());
+        workflowTask.setTaskDefinition(new TaskDef("inline_task"));
+        workflowTask.setEvaluatorType(JavascriptEvaluator.NAME);
+        workflowTask.setExpression(
                 "function scriptFun() {if ($.input.a==1){return {testValue: true}} else{return "
                         + "{testValue: false} }}; scriptFun();");
 
-        String taskId = IDGenerator.generate();
+        String taskId = new IDGenerator().generate();
 
         WorkflowDef workflowDef = new WorkflowDef();
-        Workflow workflow = new Workflow();
+        WorkflowModel workflow = new WorkflowModel();
         workflow.setWorkflowDefinition(workflowDef);
 
         TaskMapperContext taskMapperContext =
                 TaskMapperContext.newBuilder()
-                        .withWorkflowDefinition(workflowDef)
-                        .withWorkflowInstance(workflow)
+                        .withWorkflowModel(workflow)
                         .withTaskDefinition(new TaskDef())
-                        .withTaskToSchedule(taskToSchedule)
+                        .withWorkflowTask(workflowTask)
                         .withRetryCount(0)
                         .withTaskId(taskId)
                         .build();
 
-        List<Task> mappedTasks =
+        List<TaskModel> mappedTasks =
                 new InlineTaskMapper(parametersUtils, metadataDAO)
                         .getMappedTasks(taskMapperContext);
 
@@ -83,30 +82,29 @@ public class InlineTaskMapperTest {
     @Test
     public void getMappedTasks_WithoutTaskDef() {
 
-        WorkflowTask taskToSchedule = new WorkflowTask();
-        taskToSchedule.setType(TaskType.INLINE.name());
-        taskToSchedule.setEvaluatorType(JavascriptEvaluator.NAME);
-        taskToSchedule.setExpression(
+        WorkflowTask workflowTask = new WorkflowTask();
+        workflowTask.setType(TaskType.INLINE.name());
+        workflowTask.setEvaluatorType(JavascriptEvaluator.NAME);
+        workflowTask.setExpression(
                 "function scriptFun() {if ($.input.a==1){return {testValue: true}} else{return "
                         + "{testValue: false} }}; scriptFun();");
 
-        String taskId = IDGenerator.generate();
+        String taskId = new IDGenerator().generate();
 
         WorkflowDef workflowDef = new WorkflowDef();
-        Workflow workflow = new Workflow();
+        WorkflowModel workflow = new WorkflowModel();
         workflow.setWorkflowDefinition(workflowDef);
 
         TaskMapperContext taskMapperContext =
                 TaskMapperContext.newBuilder()
-                        .withWorkflowDefinition(workflowDef)
-                        .withWorkflowInstance(workflow)
+                        .withWorkflowModel(workflow)
                         .withTaskDefinition(null)
-                        .withTaskToSchedule(taskToSchedule)
+                        .withWorkflowTask(workflowTask)
                         .withRetryCount(0)
                         .withTaskId(taskId)
                         .build();
 
-        List<Task> mappedTasks =
+        List<TaskModel> mappedTasks =
                 new InlineTaskMapper(parametersUtils, metadataDAO)
                         .getMappedTasks(taskMapperContext);
 

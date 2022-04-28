@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -24,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
+import org.springframework.retry.support.RetryTemplate;
+
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
@@ -42,8 +44,11 @@ public class MySQLMetadataDAO extends MySQLBaseDAO implements MetadataDAO, Event
     private static final String CLASS_NAME = MySQLMetadataDAO.class.getSimpleName();
 
     public MySQLMetadataDAO(
-            ObjectMapper objectMapper, DataSource dataSource, MySQLProperties properties) {
-        super(objectMapper, dataSource);
+            RetryTemplate retryTemplate,
+            ObjectMapper objectMapper,
+            DataSource dataSource,
+            MySQLProperties properties) {
+        super(retryTemplate, objectMapper, dataSource);
 
         long cacheRefreshTime = properties.getTaskDefCacheRefreshInterval().getSeconds();
         Executors.newSingleThreadScheduledExecutor()
