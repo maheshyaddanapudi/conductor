@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,51 +12,122 @@
  */
 package com.netflix.conductor.postgres.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.netflix.conductor.postgres.dao.PostgresExecutionDAO;
-import com.netflix.conductor.postgres.dao.PostgresMetadataDAO;
-import com.netflix.conductor.postgres.dao.PostgresQueueDAO;
+import java.sql.SQLException;
+import java.util.Optional;
+
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
+
+import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.flyway.FlywayConfigurationCustomizer;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Import;
+import org.springframework.retry.RetryContext;
+import org.springframework.retry.backoff.NoBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 
-@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+import com.netflix.conductor.postgres.dao.PostgresExecutionDAO;
+import com.netflix.conductor.postgres.dao.PostgresMetadataDAO;
+import com.netflix.conductor.postgres.dao.PostgresQueueDAO;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(PostgresProperties.class)
 @ConditionalOnProperty(name = "conductor.db.type", havingValue = "postgres")
 // Import the DataSourceAutoConfiguration when postgres database is selected.
-// By default the datasource configuration is excluded in the main module.
+// By default, the datasource configuration is excluded in the main module.
 @Import(DataSourceAutoConfiguration.class)
 public class PostgresConfiguration {
 
-    @Bean
-    public FlywayConfigurationCustomizer flywayConfigurationCustomizer() {
-        // override the default location.
-        return configuration -> configuration.locations("classpath:db/migration_postgres");
+    DataSource dataSource;
+
+    public PostgresConfiguration(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    @Bean(initMethod = "migrate")
+    @PostConstruct
+    public Flyway flywayForPrimaryDb() {
+        return Flyway.configure()
+                .locations("classpath:db/migration_postgres")
+                .schemas("public")
+                .dataSource(dataSource)
+                .baselineOnMigrate(true)
+                .load();
     }
 
     @Bean
-    @DependsOn({"flyway", "flywayInitializer"})
-    public PostgresMetadataDAO postgresMetadataDAO(ObjectMapper objectMapper, DataSource dataSource,
-        PostgresProperties properties) {
-        return new PostgresMetadataDAO(objectMapper, dataSource, properties);
+    @DependsOn({"flywayForPrimaryDb"})
+    public PostgresMetadataDAO postgresMetadataDAO(
+            @Qualifier("postgresRetryTemplate") RetryTemplate retryTemplate,
+            ObjectMapper objectMapper,
+            PostgresProperties properties) {
+        return new PostgresMetadataDAO(retryTemplate, objectMapper, dataSource, properties);
     }
 
     @Bean
-    @DependsOn({"flyway", "flywayInitializer"})
-    public PostgresExecutionDAO postgresExecutionDAO(ObjectMapper objectMapper, DataSource dataSource) {
-        return new PostgresExecutionDAO(objectMapper, dataSource);
+    @DependsOn({"flywayForPrimaryDb"})
+    public PostgresExecutionDAO postgresExecutionDAO(
+            @Qualifier("postgresRetryTemplate") RetryTemplate retryTemplate,
+            ObjectMapper objectMapper) {
+        return new PostgresExecutionDAO(retryTemplate, objectMapper, dataSource);
     }
 
     @Bean
-    @DependsOn({"flyway", "flywayInitializer"})
-    public PostgresQueueDAO postgresQueueDAO(ObjectMapper objectMapper, DataSource dataSource) {
-        return new PostgresQueueDAO(objectMapper, dataSource);
+    @DependsOn({"flywayForPrimaryDb"})
+    public PostgresQueueDAO postgresQueueDAO(
+            @Qualifier("postgresRetryTemplate") RetryTemplate retryTemplate,
+            ObjectMapper objectMapper) {
+        return new PostgresQueueDAO(retryTemplate, objectMapper, dataSource);
+    }
+
+    @Bean
+    public RetryTemplate postgresRetryTemplate(PostgresProperties properties) {
+        SimpleRetryPolicy retryPolicy = new CustomRetryPolicy();
+        retryPolicy.setMaxAttempts(3);
+
+        RetryTemplate retryTemplate = new RetryTemplate();
+        retryTemplate.setRetryPolicy(retryPolicy);
+        retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
+        return retryTemplate;
+    }
+
+    public static class CustomRetryPolicy extends SimpleRetryPolicy {
+
+        private static final String ER_LOCK_DEADLOCK = "40P01";
+        private static final String ER_SERIALIZATION_FAILURE = "40001";
+
+        @Override
+        public boolean canRetry(final RetryContext context) {
+            final Optional<Throwable> lastThrowable =
+                    Optional.ofNullable(context.getLastThrowable());
+            return lastThrowable
+                    .map(throwable -> super.canRetry(context) && isDeadLockError(throwable))
+                    .orElseGet(() -> super.canRetry(context));
+        }
+
+        private boolean isDeadLockError(Throwable throwable) {
+            SQLException sqlException = findCauseSQLException(throwable);
+            if (sqlException == null) {
+                return false;
+            }
+            return ER_LOCK_DEADLOCK.equals(sqlException.getSQLState())
+                    || ER_SERIALIZATION_FAILURE.equals(sqlException.getSQLState());
+        }
+
+        private SQLException findCauseSQLException(Throwable throwable) {
+            Throwable causeException = throwable;
+            while (null != causeException && !(causeException instanceof SQLException)) {
+                causeException = causeException.getCause();
+            }
+            return (SQLException) causeException;
+        }
     }
 }

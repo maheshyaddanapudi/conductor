@@ -15,16 +15,16 @@ import SearchTabs from "./SearchTabs";
 import ResultsTable from "./ResultsTable";
 import DateRangePicker from "../../components/DateRangePicker";
 import { DEFAULT_ROWS_PER_PAGE } from "../../components/DataTable";
-import { useWorkflowSearch, useWorkflowNames } from "../../utils/query";
+import { useWorkflowSearch, useWorkflowNames } from "../../data/workflow";
 
 import { makeStyles } from "@material-ui/styles";
 import clsx from "clsx";
 import executionsStyles from "./executionsStyles";
-import commonStyles from "../styles";
+import sharedStyles from "../styles";
 
 const useStyles = makeStyles({
   ...executionsStyles,
-  ...commonStyles,
+  ...sharedStyles,
 });
 
 const DEFAULT_SORT = "startTime:DESC";
@@ -198,7 +198,7 @@ export default function WorkflowPanel() {
           <Grid item xs={6}>
             <Input
               fullWidth
-              label="Free Text Query"
+              label="Lucene-syntax Query (Double-quote strings for Free Text Search)"
               defaultValue={freeText}
               onBlur={setFreeText}
               clearable
