@@ -5,7 +5,7 @@ import * as d3 from "d3";
 import _ from "lodash";
 import { withResizeDetector } from "react-resize-detector";
 import parseSvgPath from "parse-svg-path";
-import { IconButton } from "@material-ui/core";
+import { IconButton, Toolbar } from "@material-ui/core";
 import ZoomInIcon from "@material-ui/icons/ZoomIn";
 import ZoomOutIcon from "@material-ui/icons/ZoomOut";
 import ZoomOutMapIcon from "@material-ui/icons/ZoomOutMap";
@@ -16,7 +16,7 @@ const BAR_MARGIN = 50;
 const BOTTOM_MARGIN = 30;
 const GRAPH_MIN_HEIGHT = 600;
 
-class WorkflowGraph extends React.PureComponent {
+class WorkflowGraph extends React.Component {
   constructor(props) {
     super(props);
     this.renderer = new dagreD3Render();
@@ -27,44 +27,15 @@ class WorkflowGraph extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps) {
-    const selectedRef = _.get(this.props.selectedTask, "ref");
-    const dagGraph = this.props.dag.graph;
-
+    // useEffect on dag
     if (prevProps.dag !== this.props.dag) {
       this.drawGraph();
       this.zoomHome();
-    } else if (prevProps.selectedRef !== selectedRef) {
-      // if ref cannot be found in this.graph, it is captured within placeholder. Look in dagGraph.
-      let resolvedRef;
-      if (!selectedRef) {
-        resolvedRef = null;
-      } else if (this.graph.hasNode(selectedRef)) {
-        resolvedRef = selectedRef;
-      } else if (dagGraph.hasNode(selectedRef)) {
-        const parentRef = _.first(dagGraph.predecessors(selectedRef));
-        console.assert(dagGraph.node(parentRef).type === "FORK_JOIN_DYNAMIC");
-        resolvedRef = this.graph
-          .successors(parentRef)
-          .find((ref) => ref.includes("DF_TASK_PLACEHOLDER"));
-      } else {
-        throw new Error("Assertion failed. ref not found");
-      }
-      const { inner } = this;
-      inner.selectAll("g.node").classed("selected", false);
+    }
 
-      if (resolvedRef) {
-        inner.select(`g[id='${resolvedRef}']`).classed("selected", true);
-      }
-      this.zoomHome();
-    } else if (prevProps.width !== this.props.width) {
-      if (prevProps.width > 0 && this.props.width > 0) {
-        console.log(
-          "rehoming. size change:",
-          prevProps.width,
-          this.props.width
-        );
-        this.zoomHome();
-      }
+    // useEffect on selectedRef
+    if (prevProps.selectedTask !== this.props.selectedTask) {
+      this.highlightSelectedNode();
     }
   }
 
@@ -90,8 +61,36 @@ class WorkflowGraph extends React.PureComponent {
     this.zoom(this.svg);
 
     this.drawGraph();
+    this.highlightSelectedNode();
     this.zoomHome();
   }
+
+  highlightSelectedNode = () => {
+    const dagGraph = this.props.dag.graph;
+    const selectedRef = _.get(this.props.selectedTask, "ref");
+    // if ref cannot be found in this.graph, it is captured within placeholder. Look in dagGraph.
+    let resolvedRef;
+    if (!selectedRef) {
+      resolvedRef = null;
+    } else if (this.graph.hasNode(selectedRef)) {
+      resolvedRef = selectedRef;
+    } else if (dagGraph.hasNode(selectedRef)) {
+      const parentRef = _.first(dagGraph.predecessors(selectedRef));
+      console.assert(dagGraph.node(parentRef).type === "FORK_JOIN_DYNAMIC");
+      resolvedRef = this.graph
+        .successors(parentRef)
+        .find((ref) => ref.includes("DF_TASK_PLACEHOLDER"));
+    } else {
+      throw new Error("Assertion failed. ref not found");
+    }
+
+    const { inner } = this;
+    inner.selectAll("g.node").classed("selected", false);
+
+    if (resolvedRef) {
+      inner.select(`g[id='${resolvedRef}']`).classed("selected", true);
+    }
+  };
 
   zoomInOut = (dir) => {
     const { svg, inner } = this;
@@ -297,9 +296,10 @@ class WorkflowGraph extends React.PureComponent {
   };
 
   render() {
+    const { style, className } = this.props;
     return (
-      <div className="graphContainer">
-        <div>
+      <div style={style} className={`graphWrapper ${className || ""}`}>
+        <Toolbar>
           <IconButton onClick={() => this.zoomInOut("in")}>
             <ZoomInIcon />
           </IconButton>
@@ -313,7 +313,7 @@ class WorkflowGraph extends React.PureComponent {
             <ZoomOutMapIcon />
           </IconButton>
           <span>Shortcut: Ctrl + scroll to zoom</span>
-        </div>
+        </Toolbar>
         <svg ref={this.svgRef} className="graphSvg">
           <defs>
             <filter id="brightness">

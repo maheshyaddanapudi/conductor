@@ -12,22 +12,17 @@
  */
 package com.netflix.conductor.mysql.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.convert.DurationUnit;
-
-import java.sql.Connection;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("conductor.mysql")
 public class MySQLProperties {
 
-
-    /**
-     * The time (in seconds) after which the in-memory task definitions cache will be refreshed
-     */
+    /** The time (in seconds) after which the in-memory task definitions cache will be refreshed */
     private Duration taskDefCacheRefreshInterval = Duration.ofSeconds(60);
 
+    private Integer deadlockRetryMax = 3;
 
     public Duration getTaskDefCacheRefreshInterval() {
         return taskDefCacheRefreshInterval;
@@ -35,5 +30,13 @@ public class MySQLProperties {
 
     public void setTaskDefCacheRefreshInterval(Duration taskDefCacheRefreshInterval) {
         this.taskDefCacheRefreshInterval = taskDefCacheRefreshInterval;
+    }
+
+    public Integer getDeadlockRetryMax() {
+        return deadlockRetryMax;
+    }
+
+    public void setDeadlockRetryMax(Integer deadlockRetryMax) {
+        this.deadlockRetryMax = deadlockRetryMax;
     }
 }

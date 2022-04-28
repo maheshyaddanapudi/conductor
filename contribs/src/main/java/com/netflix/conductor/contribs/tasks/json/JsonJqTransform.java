@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,27 +12,29 @@
  */
 package com.netflix.conductor.contribs.tasks.json;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.netflix.conductor.common.metadata.tasks.Task;
-import com.netflix.conductor.common.run.Workflow;
-import com.netflix.conductor.core.execution.WorkflowExecutor;
-import com.netflix.conductor.core.execution.tasks.WorkflowSystemTask;
-import net.thisptr.jackson.jq.JsonQuery;
-import net.thisptr.jackson.jq.Scope;
-import net.thisptr.jackson.jq.exception.JsonQueryException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import com.netflix.conductor.core.execution.WorkflowExecutor;
+import com.netflix.conductor.core.execution.tasks.WorkflowSystemTask;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import net.thisptr.jackson.jq.JsonQuery;
+import net.thisptr.jackson.jq.Scope;
+import net.thisptr.jackson.jq.exception.JsonQueryException;
 
 @Component(JsonJqTransform.NAME)
 public class JsonJqTransform extends WorkflowSystemTask {
@@ -56,15 +58,15 @@ public class JsonJqTransform extends WorkflowSystemTask {
     }
 
     @Override
-    public void start(Workflow workflow, Task task, WorkflowExecutor executor) {
+    public void start(WorkflowModel workflow, TaskModel task, WorkflowExecutor executor) {
         final Map<String, Object> taskInput = task.getInputData();
-        final Map<String, Object> taskOutput = task.getOutputData();
 
         final String queryExpression = (String) taskInput.get(QUERY_EXPRESSION_PARAMETER);
 
         if (queryExpression == null) {
-            task.setReasonForIncompletion("Missing '" + QUERY_EXPRESSION_PARAMETER + "' in input parameters");
-            task.setStatus(Task.Status.FAILED);
+            task.setReasonForIncompletion(
+                    "Missing '" + QUERY_EXPRESSION_PARAMETER + "' in input parameters");
+            task.setStatus(TaskModel.Status.FAILED);
             return;
         }
 
@@ -76,34 +78,42 @@ public class JsonJqTransform extends WorkflowSystemTask {
 
             final List<JsonNode> result = query.apply(childScope, input);
 
-            task.setStatus(Task.Status.COMPLETED);
+            task.setStatus(TaskModel.Status.COMPLETED);
             if (result == null) {
-                taskOutput.put(OUTPUT_RESULT, null);
-                taskOutput.put(OUTPUT_RESULT_LIST, null);
+                task.addOutput(OUTPUT_RESULT, null);
+                task.addOutput(OUTPUT_RESULT_LIST, null);
             } else if (result.isEmpty()) {
-                taskOutput.put(OUTPUT_RESULT, null);
-                taskOutput.put(OUTPUT_RESULT_LIST, result);
+                task.addOutput(OUTPUT_RESULT, null);
+                task.addOutput(OUTPUT_RESULT_LIST, result);
             } else {
-                taskOutput.put(OUTPUT_RESULT, result.get(0));
-                taskOutput.put(OUTPUT_RESULT_LIST, result);
+                task.addOutput(OUTPUT_RESULT, result.get(0));
+                task.addOutput(OUTPUT_RESULT_LIST, result);
             }
         } catch (final Exception e) {
-            LOGGER.error("Error executing task: {} in workflow: {}", task.getTaskId(), workflow.getWorkflowId(), e);
-            task.setStatus(Task.Status.FAILED);
+            LOGGER.error(
+                    "Error executing task: {} in workflow: {}",
+                    task.getTaskId(),
+                    workflow.getWorkflowId(),
+                    e);
+            task.setStatus(TaskModel.Status.FAILED);
             final String message = extractFirstValidMessage(e);
             task.setReasonForIncompletion(message);
-            taskOutput.put(OUTPUT_ERROR, message);
+            task.addOutput(OUTPUT_ERROR, message);
         }
     }
 
     private LoadingCache<String, JsonQuery> createQueryCache() {
-        final CacheLoader<String, JsonQuery> loader = new CacheLoader<String, JsonQuery>() {
-            @Override
-            public JsonQuery load(String query) throws JsonQueryException {
-                return JsonQuery.compile(query);
-            }
-        };
-        return CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).maximumSize(1000).build(loader);
+        final CacheLoader<String, JsonQuery> loader =
+                new CacheLoader<>() {
+                    @Override
+                    public JsonQuery load(String query) throws JsonQueryException {
+                        return JsonQuery.compile(query);
+                    }
+                };
+        return CacheBuilder.newBuilder()
+                .expireAfterWrite(1, TimeUnit.HOURS)
+                .maximumSize(1000)
+                .build(loader);
     }
 
     private String extractFirstValidMessage(final Exception e) {

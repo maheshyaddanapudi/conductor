@@ -1,10 +1,9 @@
 import React from "react";
 import { useRouteMatch } from "react-router-dom";
 import sharedStyles from "../styles";
-import { useTaskQueueInfo } from "../../utils/query";
+import { useTaskQueueInfo, useTaskNames } from "../../data/task";
 import { makeStyles } from "@material-ui/styles";
 import { Helmet } from "react-helmet";
-import { useTaskNames } from "../../utils/query";
 import { usePushHistory } from "../../components/NavLink";
 
 import {
@@ -43,7 +42,7 @@ export default function TaskDefinition() {
         <title>Conductor UI - Task Queue</title>
       </Helmet>
       <div className={classes.header} style={{ paddingBottom: 20 }}>
-        <Heading level={4} style={{ marginBottom: 30 }}>
+        <Heading level={3} style={{ marginBottom: 30 }}>
           Task Queue Info
         </Heading>
         <Dropdown
