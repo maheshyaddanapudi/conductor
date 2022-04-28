@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.netflix.conductor.annotations.VisibleForTesting;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.utils.TaskUtils;
 import com.netflix.conductor.core.events.ScriptEvaluator;
@@ -29,8 +30,6 @@ import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.utils.ParametersUtils;
 import com.netflix.conductor.model.TaskModel;
 import com.netflix.conductor.model.WorkflowModel;
-
-import com.google.common.annotations.VisibleForTesting;
 
 import static com.netflix.conductor.common.metadata.tasks.TaskType.TASK_TYPE_DO_WHILE;
 
@@ -70,7 +69,8 @@ public class DoWhile extends WorkflowSystemTask {
         for (TaskModel t : workflow.getTasks()) {
             if (task.getWorkflowTask()
                             .has(TaskUtils.removeIterationFromTaskRefName(t.getReferenceTaskName()))
-                    && !task.getReferenceTaskName().equals(t.getReferenceTaskName())) {
+                    && !task.getReferenceTaskName().equals(t.getReferenceTaskName())
+                    && task.getIteration() == t.getIteration()) {
                 relevantTask = relevantTasks.get(t.getReferenceTaskName());
                 if (relevantTask == null || t.getRetryCount() > relevantTask.getRetryCount()) {
                     relevantTasks.put(t.getReferenceTaskName(), t);
@@ -78,7 +78,11 @@ public class DoWhile extends WorkflowSystemTask {
             }
         }
         Collection<TaskModel> loopOver = relevantTasks.values();
-
+        LOGGER.debug(
+                "Workflow {} waiting for tasks {} to complete iteration {}",
+                workflow.getWorkflowId(),
+                loopOver.stream().map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),
+                task.getIteration());
         for (TaskModel loopOverTask : loopOver) {
             TaskModel.Status taskStatus = loopOverTask.getStatus();
             hasFailures = !taskStatus.isSuccessful();
