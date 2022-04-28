@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -79,6 +79,12 @@ public class ElasticSearchProperties {
      * handled outside of this module.</em>
      */
     private String documentTypeOverride = "";
+
+    /** Elasticsearch basic auth username */
+    private String username;
+
+    /** Elasticsearch basic auth password */
+    private String password;
 
     public String getUrl() {
         return url;
@@ -182,6 +188,22 @@ public class ElasticSearchProperties {
 
     public void setDocumentTypeOverride(String documentTypeOverride) {
         this.documentTypeOverride = documentTypeOverride;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public List<URL> toURLs() {

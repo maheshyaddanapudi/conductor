@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -23,17 +23,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.tasks.TaskType;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
-import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.exception.TerminateWorkflowException;
 import com.netflix.conductor.core.utils.ParametersUtils;
 import com.netflix.conductor.dao.MetadataDAO;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
-@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Component
 public class KafkaPublishTaskMapper implements TaskMapper {
 
@@ -55,55 +54,37 @@ public class KafkaPublishTaskMapper implements TaskMapper {
 
     /**
      * This method maps a {@link WorkflowTask} of type {@link TaskType#KAFKA_PUBLISH} to a {@link
-     * Task} in a {@link Task.Status#SCHEDULED} state
+     * TaskModel} in a {@link TaskModel.Status#SCHEDULED} state
      *
      * @param taskMapperContext: A wrapper class containing the {@link WorkflowTask}, {@link
-     *     WorkflowDef}, {@link Workflow} and a string representation of the TaskId
+     *     WorkflowDef}, {@link WorkflowModel} and a string representation of the TaskId
      * @return a List with just one Kafka task
      * @throws TerminateWorkflowException In case if the task definition does not exist
      */
     @Override
-    public List<Task> getMappedTasks(TaskMapperContext taskMapperContext)
+    public List<TaskModel> getMappedTasks(TaskMapperContext taskMapperContext)
             throws TerminateWorkflowException {
 
         LOGGER.debug("TaskMapperContext {} in KafkaPublishTaskMapper", taskMapperContext);
 
-        WorkflowTask taskToSchedule = taskMapperContext.getTaskToSchedule();
-        Workflow workflowInstance = taskMapperContext.getWorkflowInstance();
+        WorkflowTask workflowTask = taskMapperContext.getWorkflowTask();
+        WorkflowModel workflowModel = taskMapperContext.getWorkflowModel();
         String taskId = taskMapperContext.getTaskId();
         int retryCount = taskMapperContext.getRetryCount();
 
         TaskDef taskDefinition =
                 Optional.ofNullable(taskMapperContext.getTaskDefinition())
-                        .orElseGet(
-                                () ->
-                                        Optional.ofNullable(
-                                                        metadataDAO.getTaskDef(
-                                                                taskToSchedule.getName()))
-                                                .orElse(null));
+                        .orElseGet(() -> metadataDAO.getTaskDef(workflowTask.getName()));
 
         Map<String, Object> input =
                 parametersUtils.getTaskInputV2(
-                        taskToSchedule.getInputParameters(),
-                        workflowInstance,
-                        taskId,
-                        taskDefinition);
+                        workflowTask.getInputParameters(), workflowModel, taskId, taskDefinition);
 
-        Task kafkaPublishTask = new Task();
-        kafkaPublishTask.setTaskType(taskToSchedule.getType());
-        kafkaPublishTask.setTaskDefName(taskToSchedule.getName());
-        kafkaPublishTask.setReferenceTaskName(taskToSchedule.getTaskReferenceName());
-        kafkaPublishTask.setWorkflowInstanceId(workflowInstance.getWorkflowId());
-        kafkaPublishTask.setWorkflowType(workflowInstance.getWorkflowName());
-        kafkaPublishTask.setCorrelationId(workflowInstance.getCorrelationId());
-        kafkaPublishTask.setScheduledTime(System.currentTimeMillis());
-        kafkaPublishTask.setTaskId(taskId);
+        TaskModel kafkaPublishTask = taskMapperContext.createTaskModel();
         kafkaPublishTask.setInputData(input);
-        kafkaPublishTask.setStatus(Task.Status.SCHEDULED);
+        kafkaPublishTask.setStatus(TaskModel.Status.SCHEDULED);
         kafkaPublishTask.setRetryCount(retryCount);
-        kafkaPublishTask.setCallbackAfterSeconds(taskToSchedule.getStartDelay());
-        kafkaPublishTask.setWorkflowTask(taskToSchedule);
-        kafkaPublishTask.setWorkflowPriority(workflowInstance.getPriority());
+        kafkaPublishTask.setCallbackAfterSeconds(workflowTask.getStartDelay());
         if (Objects.nonNull(taskDefinition)) {
             kafkaPublishTask.setExecutionNameSpace(taskDefinition.getExecutionNameSpace());
             kafkaPublishTask.setIsolationGroupId(taskDefinition.getIsolationGroupId());

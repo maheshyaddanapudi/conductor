@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -14,19 +14,15 @@ package com.netflix.conductor.core.utils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.lang3.StringUtils;
 
 import com.netflix.conductor.core.exception.ApplicationException;
 
-import com.google.common.base.Preconditions;
-
 public class Utils {
+
+    public static final String DECIDER_QUEUE = "_deciderQueue";
 
     /**
      * ID of the server. Can be host name, IP address or any other meaningful identifier
@@ -64,7 +60,7 @@ public class Utils {
      */
     public static void checkArgument(boolean condition, String errorMessage) {
         if (!condition) {
-            throw new ApplicationException(ApplicationException.Code.INVALID_INPUT, errorMessage);
+            throw new IllegalArgumentException(errorMessage);
         }
     }
 
@@ -102,9 +98,7 @@ public class Utils {
      * @throws ApplicationException if input string is not valid
      */
     public static void checkNotNullOrEmpty(String input, String errorMessage) {
-        try {
-            Preconditions.checkArgument(StringUtils.isNotBlank(input), errorMessage);
-        } catch (IllegalArgumentException exception) {
+        if (StringUtils.isEmpty(input)) {
             throw new ApplicationException(ApplicationException.Code.INVALID_INPUT, errorMessage);
         }
     }
@@ -117,10 +111,26 @@ public class Utils {
      * @throws ApplicationException if input object is not valid
      */
     public static void checkNotNull(Object object, String errorMessage) {
-        try {
-            Preconditions.checkNotNull(object, errorMessage);
-        } catch (NullPointerException exception) {
-            throw new ApplicationException(ApplicationException.Code.INVALID_INPUT, errorMessage);
+        if (object == null) {
+            throw new NullPointerException(errorMessage);
         }
+    }
+
+    /**
+     * Used to determine if the exception is thrown due to a transient failure and the operation is
+     * expected to succeed upon retrying.
+     *
+     * @param throwable the exception that is thrown
+     * @return true - if the exception is a transient failure
+     *     <p>false - if the exception is non-transient
+     */
+    public static boolean isTransientException(Throwable throwable) {
+        if (throwable != null) {
+            return !((throwable instanceof UnsupportedOperationException)
+                    || (throwable instanceof ApplicationException
+                            && ((ApplicationException) throwable).getCode()
+                                    != ApplicationException.Code.BACKEND_ERROR));
+        }
+        return true;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -25,11 +25,21 @@ public class PostgresProperties {
     @DurationUnit(ChronoUnit.SECONDS)
     private Duration taskDefCacheRefreshInterval = Duration.ofSeconds(60);
 
+    private Integer deadlockRetryMax = 3;
+
     public Duration getTaskDefCacheRefreshInterval() {
         return taskDefCacheRefreshInterval;
     }
 
     public void setTaskDefCacheRefreshInterval(Duration taskDefCacheRefreshInterval) {
         this.taskDefCacheRefreshInterval = taskDefCacheRefreshInterval;
+    }
+
+    public Integer getDeadlockRetryMax() {
+        return deadlockRetryMax;
+    }
+
+    public void setDeadlockRetryMax(Integer deadlockRetryMax) {
+        this.deadlockRetryMax = deadlockRetryMax;
     }
 }

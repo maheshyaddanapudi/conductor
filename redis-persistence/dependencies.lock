@@ -160,7 +160,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.18"
+            "locked": "1.4.19"
         },
         "commons-cli:commons-cli": {
             "locked": "1.4",
@@ -258,7 +258,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-core",
                 "org.apache.logging.log4j:log4j-jul",
@@ -267,19 +267,19 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-web"
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.luaj:luaj-jse": {
             "locked": "3.0",
@@ -455,12 +455,6 @@
                 "com.github.vlsi.compactmap:compactmap"
             ]
         },
-        "com.github.rholder:guava-retrying": {
-            "locked": "2.0.0",
-            "transitive": [
-                "com.netflix.conductor:conductor-common"
-            ]
-        },
         "com.github.vlsi.compactmap:compactmap": {
             "locked": "1.2.1",
             "transitive": [
@@ -468,10 +462,8 @@
             ]
         },
         "com.google.code.findbugs:jsr305": {
-            "locked": "3.0.2",
+            "locked": "3.0.1",
             "transitive": [
-                "com.github.rholder:guava-retrying",
-                "com.google.guava:guava",
                 "com.netflix.archaius:archaius-core",
                 "com.netflix.netflix-commons:netflix-infix"
             ]
@@ -484,33 +476,13 @@
                 "com.netflix.netflix-commons:netflix-infix"
             ]
         },
-        "com.google.errorprone:error_prone_annotations": {
-            "locked": "2.3.4",
-            "transitive": [
-                "com.google.guava:guava"
-            ]
-        },
-        "com.google.guava:failureaccess": {
-            "locked": "1.0.1",
-            "transitive": [
-                "com.google.guava:guava"
-            ]
-        },
         "com.google.guava:guava": {
-            "locked": "30.0-jre",
+            "locked": "19.0",
             "transitive": [
-                "com.github.rholder:guava-retrying",
                 "com.google.inject:guice",
                 "com.netflix.archaius:archaius-core",
-                "com.netflix.conductor:conductor-core",
                 "com.netflix.netflix-commons:netflix-infix",
                 "com.netflix.servo:servo-core"
-            ]
-        },
-        "com.google.guava:listenablefuture": {
-            "locked": "9999.0-empty-to-avoid-conflict-with-guava",
-            "transitive": [
-                "com.google.guava:guava"
             ]
         },
         "com.google.inject:guice": {
@@ -519,12 +491,6 @@
                 "com.netflix.dyno-queues:dyno-queues-redis",
                 "com.netflix.dyno:dyno-contrib",
                 "com.netflix.eureka:eureka-client"
-            ]
-        },
-        "com.google.j2objc:j2objc-annotations": {
-            "locked": "1.3",
-            "transitive": [
-                "com.google.guava:guava"
             ]
         },
         "com.google.protobuf:protobuf-java": {
@@ -697,7 +663,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.18",
+            "locked": "1.4.19",
             "transitive": [
                 "com.netflix.eureka:eureka-client"
             ]
@@ -875,7 +841,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -887,7 +853,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -897,7 +863,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -905,7 +871,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -913,17 +879,11 @@
             ]
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core"
-            ]
-        },
-        "org.checkerframework:checker-qual": {
-            "locked": "3.5.0",
-            "transitive": [
-                "com.google.guava:guava"
             ]
         },
         "org.codehaus.jettison:jettison": {
@@ -1154,7 +1114,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.18"
+            "locked": "1.4.19"
         },
         "com.vaadin.external.google:android-json": {
             "locked": "0.0.20131108.vaadin1",
@@ -1300,7 +1260,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-core",
                 "org.apache.logging.log4j:log4j-jul",
@@ -1309,26 +1269,26 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-web",
                 "org.springframework.boot:spring-boot-starter-log4j2"
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.springframework.boot:spring-boot-starter-log4j2"
             ]
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.springframework.boot:spring-boot-starter-log4j2"
             ]
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.apiguardian:apiguardian-api": {
             "locked": "1.1.0",
@@ -1654,12 +1614,6 @@
                 "com.github.vlsi.compactmap:compactmap"
             ]
         },
-        "com.github.rholder:guava-retrying": {
-            "locked": "2.0.0",
-            "transitive": [
-                "com.netflix.conductor:conductor-common"
-            ]
-        },
         "com.github.vlsi.compactmap:compactmap": {
             "locked": "1.2.1",
             "transitive": [
@@ -1667,10 +1621,8 @@
             ]
         },
         "com.google.code.findbugs:jsr305": {
-            "locked": "3.0.2",
+            "locked": "3.0.1",
             "transitive": [
-                "com.github.rholder:guava-retrying",
-                "com.google.guava:guava",
                 "com.netflix.archaius:archaius-core",
                 "com.netflix.netflix-commons:netflix-infix"
             ]
@@ -1683,33 +1635,13 @@
                 "com.netflix.netflix-commons:netflix-infix"
             ]
         },
-        "com.google.errorprone:error_prone_annotations": {
-            "locked": "2.3.4",
-            "transitive": [
-                "com.google.guava:guava"
-            ]
-        },
-        "com.google.guava:failureaccess": {
-            "locked": "1.0.1",
-            "transitive": [
-                "com.google.guava:guava"
-            ]
-        },
         "com.google.guava:guava": {
-            "locked": "30.0-jre",
+            "locked": "19.0",
             "transitive": [
-                "com.github.rholder:guava-retrying",
                 "com.google.inject:guice",
                 "com.netflix.archaius:archaius-core",
-                "com.netflix.conductor:conductor-core",
                 "com.netflix.netflix-commons:netflix-infix",
                 "com.netflix.servo:servo-core"
-            ]
-        },
-        "com.google.guava:listenablefuture": {
-            "locked": "9999.0-empty-to-avoid-conflict-with-guava",
-            "transitive": [
-                "com.google.guava:guava"
             ]
         },
         "com.google.inject:guice": {
@@ -1718,12 +1650,6 @@
                 "com.netflix.dyno-queues:dyno-queues-redis",
                 "com.netflix.dyno:dyno-contrib",
                 "com.netflix.eureka:eureka-client"
-            ]
-        },
-        "com.google.j2objc:j2objc-annotations": {
-            "locked": "1.3",
-            "transitive": [
-                "com.google.guava:guava"
             ]
         },
         "com.google.protobuf:protobuf-java": {
@@ -1897,7 +1823,7 @@
             ]
         },
         "com.thoughtworks.xstream:xstream": {
-            "locked": "1.4.18",
+            "locked": "1.4.19",
             "transitive": [
                 "com.netflix.eureka:eureka-client"
             ]
@@ -2106,7 +2032,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -2118,7 +2044,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -2129,7 +2055,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -2138,7 +2064,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -2147,7 +2073,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -2169,12 +2095,6 @@
             "locked": "3.16.1",
             "transitive": [
                 "org.springframework.boot:spring-boot-starter-test"
-            ]
-        },
-        "org.checkerframework:checker-qual": {
-            "locked": "3.5.0",
-            "transitive": [
-                "com.google.guava:guava"
             ]
         },
         "org.codehaus.jettison:jettison": {

@@ -1,20 +1,20 @@
 /*
- *  Copyright 2021 Netflix, Inc.
- *  <p>
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- *  the License. You may obtain a copy of the License at
- *  <p>
- *  http://www.apache.org/licenses/LICENSE-2.0
- *  <p>
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- *  an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations under the License.
+ * Copyright 2022 Netflix, Inc.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
-
 package com.netflix.conductor.cassandra.dao
 
 import com.netflix.conductor.common.metadata.tasks.TaskDef
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef
+
 import spock.lang.Subject
 
 class CassandraMetadataDAOSpec extends CassandraSpec {
@@ -69,7 +69,7 @@ class CassandraMetadataDAOSpec extends CassandraSpec {
         defOptional.get() == workflowDef
 
         when: // modify the definition
-        workflowDef.setOwnerEmail("junit@test.com")
+        workflowDef.setOwnerEmail("test@junit.com")
         metadataDAO.updateWorkflowDef(workflowDef)
         defOptional = metadataDAO.getWorkflowDef(name, higherVersion)
 
@@ -137,5 +137,40 @@ class CassandraMetadataDAOSpec extends CassandraSpec {
         taskDefList && taskDefList.size() == 1
         // fetch deleted task def
         metadataDAO.getTaskDef(task2Name) == null
+    }
+
+    def "parse index string"() {
+        expect:
+        def pair = metadataDAO.getWorkflowNameAndVersion(nameVersionStr)
+        pair.left == workflowName
+        pair.right == version
+
+        where:
+        nameVersionStr << ['name/1', 'namespace/name/3', '/namespace/name_with_lodash/2', 'name//4', 'name-with$%/895']
+        workflowName << ['name', 'namespace/name', '/namespace/name_with_lodash', 'name/', 'name-with$%']
+        version << [1, 3, 2, 4, 895]
+    }
+
+    def "parse index string - incorrect values"() {
+        when:
+        metadataDAO.getWorkflowNameAndVersion("name_with_no_version")
+
+        then:
+        def ex = thrown(IllegalStateException.class)
+        println(ex.message)
+
+        when:
+        metadataDAO.getWorkflowNameAndVersion("name_with_no_version/")
+
+        then:
+        ex = thrown(IllegalStateException.class)
+        println(ex.message)
+
+        when:
+        metadataDAO.getWorkflowNameAndVersion("name/non_number_version")
+
+        then:
+        ex = thrown(IllegalStateException.class)
+        println(ex.message)
     }
 }

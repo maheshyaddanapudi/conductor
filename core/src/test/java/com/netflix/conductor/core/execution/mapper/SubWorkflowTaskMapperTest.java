@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -21,16 +21,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.workflow.SubWorkflowParams;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
-import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.exception.TerminateWorkflowException;
 import com.netflix.conductor.core.execution.DeciderService;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.core.utils.ParametersUtils;
 import com.netflix.conductor.dao.MetadataDAO;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
 import static com.netflix.conductor.common.metadata.tasks.TaskType.TASK_TYPE_SUB_WORKFLOW;
 
@@ -46,6 +46,7 @@ public class SubWorkflowTaskMapperTest {
     private SubWorkflowTaskMapper subWorkflowTaskMapper;
     private ParametersUtils parametersUtils;
     private DeciderService deciderService;
+    private IDGenerator idGenerator;
 
     @Rule public ExpectedException expectedException = ExpectedException.none();
 
@@ -55,23 +56,24 @@ public class SubWorkflowTaskMapperTest {
         MetadataDAO metadataDAO = mock(MetadataDAO.class);
         subWorkflowTaskMapper = new SubWorkflowTaskMapper(parametersUtils, metadataDAO);
         deciderService = mock(DeciderService.class);
+        idGenerator = new IDGenerator();
     }
 
     @Test
     public void getMappedTasks() {
         // Given
         WorkflowDef workflowDef = new WorkflowDef();
-        Workflow workflowInstance = new Workflow();
-        workflowInstance.setWorkflowDefinition(workflowDef);
-        WorkflowTask taskToSchedule = new WorkflowTask();
+        WorkflowModel workflowModel = new WorkflowModel();
+        workflowModel.setWorkflowDefinition(workflowDef);
+        WorkflowTask workflowTask = new WorkflowTask();
         SubWorkflowParams subWorkflowParams = new SubWorkflowParams();
         subWorkflowParams.setName("Foo");
         subWorkflowParams.setVersion(2);
-        taskToSchedule.setSubWorkflowParam(subWorkflowParams);
-        taskToSchedule.setStartDelay(30);
+        workflowTask.setSubWorkflowParam(subWorkflowParams);
+        workflowTask.setStartDelay(30);
         Map<String, Object> taskInput = new HashMap<>();
         Map<String, String> taskToDomain =
-                new HashMap<String, String>() {
+                new HashMap<>() {
                     {
                         put("*", "unittest");
                     }
@@ -81,29 +83,28 @@ public class SubWorkflowTaskMapperTest {
         subWorkflowParamMap.put("name", "FooWorkFlow");
         subWorkflowParamMap.put("version", 2);
         subWorkflowParamMap.put("taskToDomain", taskToDomain);
-        when(parametersUtils.getTaskInputV2(anyMap(), any(Workflow.class), any(), any()))
+        when(parametersUtils.getTaskInputV2(anyMap(), any(WorkflowModel.class), any(), any()))
                 .thenReturn(subWorkflowParamMap);
 
         // When
         TaskMapperContext taskMapperContext =
                 TaskMapperContext.newBuilder()
-                        .withWorkflowDefinition(workflowDef)
-                        .withWorkflowInstance(workflowInstance)
-                        .withTaskToSchedule(taskToSchedule)
+                        .withWorkflowModel(workflowModel)
+                        .withWorkflowTask(workflowTask)
                         .withTaskInput(taskInput)
                         .withRetryCount(0)
-                        .withTaskId(IDGenerator.generate())
+                        .withTaskId(idGenerator.generate())
                         .withDeciderService(deciderService)
                         .build();
 
-        List<Task> mappedTasks = subWorkflowTaskMapper.getMappedTasks(taskMapperContext);
+        List<TaskModel> mappedTasks = subWorkflowTaskMapper.getMappedTasks(taskMapperContext);
 
         // Then
         assertFalse(mappedTasks.isEmpty());
         assertEquals(1, mappedTasks.size());
 
-        Task subWorkFlowTask = mappedTasks.get(0);
-        assertEquals(Task.Status.SCHEDULED, subWorkFlowTask.getStatus());
+        TaskModel subWorkFlowTask = mappedTasks.get(0);
+        assertEquals(TaskModel.Status.SCHEDULED, subWorkFlowTask.getStatus());
         assertEquals(TASK_TYPE_SUB_WORKFLOW, subWorkFlowTask.getTaskType());
         assertEquals(30, subWorkFlowTask.getCallbackAfterSeconds());
         assertEquals(taskToDomain, subWorkFlowTask.getInputData().get("subWorkflowTaskToDomain"));
@@ -113,11 +114,11 @@ public class SubWorkflowTaskMapperTest {
     public void testTaskToDomain() {
         // Given
         WorkflowDef workflowDef = new WorkflowDef();
-        Workflow workflowInstance = new Workflow();
-        workflowInstance.setWorkflowDefinition(workflowDef);
-        WorkflowTask taskToSchedule = new WorkflowTask();
+        WorkflowModel workflowModel = new WorkflowModel();
+        workflowModel.setWorkflowDefinition(workflowDef);
+        WorkflowTask workflowTask = new WorkflowTask();
         Map<String, String> taskToDomain =
-                new HashMap<String, String>() {
+                new HashMap<>() {
                     {
                         put("*", "unittest");
                     }
@@ -126,36 +127,35 @@ public class SubWorkflowTaskMapperTest {
         subWorkflowParams.setName("Foo");
         subWorkflowParams.setVersion(2);
         subWorkflowParams.setTaskToDomain(taskToDomain);
-        taskToSchedule.setSubWorkflowParam(subWorkflowParams);
+        workflowTask.setSubWorkflowParam(subWorkflowParams);
         Map<String, Object> taskInput = new HashMap<>();
 
         Map<String, Object> subWorkflowParamMap = new HashMap<>();
         subWorkflowParamMap.put("name", "FooWorkFlow");
         subWorkflowParamMap.put("version", 2);
 
-        when(parametersUtils.getTaskInputV2(anyMap(), any(Workflow.class), any(), any()))
+        when(parametersUtils.getTaskInputV2(anyMap(), any(WorkflowModel.class), any(), any()))
                 .thenReturn(subWorkflowParamMap);
 
         // When
         TaskMapperContext taskMapperContext =
                 TaskMapperContext.newBuilder()
-                        .withWorkflowDefinition(workflowDef)
-                        .withWorkflowInstance(workflowInstance)
-                        .withTaskToSchedule(taskToSchedule)
+                        .withWorkflowModel(workflowModel)
+                        .withWorkflowTask(workflowTask)
                         .withTaskInput(taskInput)
                         .withRetryCount(0)
-                        .withTaskId(IDGenerator.generate())
+                        .withTaskId(new IDGenerator().generate())
                         .withDeciderService(deciderService)
                         .build();
 
-        List<Task> mappedTasks = subWorkflowTaskMapper.getMappedTasks(taskMapperContext);
+        List<TaskModel> mappedTasks = subWorkflowTaskMapper.getMappedTasks(taskMapperContext);
 
         // Then
         assertFalse(mappedTasks.isEmpty());
         assertEquals(1, mappedTasks.size());
 
-        Task subWorkFlowTask = mappedTasks.get(0);
-        assertEquals(Task.Status.SCHEDULED, subWorkFlowTask.getStatus());
+        TaskModel subWorkFlowTask = mappedTasks.get(0);
+        assertEquals(TaskModel.Status.SCHEDULED, subWorkFlowTask.getStatus());
         assertEquals(TASK_TYPE_SUB_WORKFLOW, subWorkFlowTask.getTaskType());
     }
 
@@ -179,7 +179,7 @@ public class SubWorkflowTaskMapperTest {
         expectedException.expectMessage(
                 String.format(
                         "Task %s is defined as sub-workflow and is missing subWorkflowParams. "
-                                + "Please check the blueprint",
+                                + "Please check the workflow definition",
                         workflowTask.getName()));
 
         subWorkflowTaskMapper.getSubWorkflowParams(workflowTask);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -18,14 +18,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.tasks.TaskType;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
-import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.core.utils.ParametersUtils;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 
 import static org.mockito.Mockito.mock;
 
@@ -40,26 +40,25 @@ public class TerminateTaskMapperTest {
     @Test
     public void getMappedTasks() {
 
-        WorkflowTask taskToSchedule = new WorkflowTask();
-        taskToSchedule.setType(TaskType.TASK_TYPE_TERMINATE);
+        WorkflowTask workflowTask = new WorkflowTask();
+        workflowTask.setType(TaskType.TASK_TYPE_TERMINATE);
 
-        String taskId = IDGenerator.generate();
+        String taskId = new IDGenerator().generate();
 
         WorkflowDef workflowDef = new WorkflowDef();
-        Workflow workflow = new Workflow();
+        WorkflowModel workflow = new WorkflowModel();
         workflow.setWorkflowDefinition(workflowDef);
 
         TaskMapperContext taskMapperContext =
                 TaskMapperContext.newBuilder()
-                        .withWorkflowDefinition(workflowDef)
-                        .withWorkflowInstance(workflow)
+                        .withWorkflowModel(workflow)
                         .withTaskDefinition(new TaskDef())
-                        .withTaskToSchedule(taskToSchedule)
+                        .withWorkflowTask(workflowTask)
                         .withRetryCount(0)
                         .withTaskId(taskId)
                         .build();
 
-        List<Task> mappedTasks =
+        List<TaskModel> mappedTasks =
                 new TerminateTaskMapper(parametersUtils).getMappedTasks(taskMapperContext);
 
         Assert.assertNotNull(mappedTasks);

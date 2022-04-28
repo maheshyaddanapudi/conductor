@@ -1,12 +1,5 @@
 apply plugin: 'groovy'
 
-spotless {
-    groovy {
-        importOrder('java', 'javax', 'org', 'com.netflix', '', '\\#com.netflix', '\\#')
-        licenseHeaderFile("$rootDir/licenseheader.txt")
-    }
-}
-
 dependencies {
     testImplementation project(':conductor-server')
     testImplementation project(':conductor-common')
@@ -22,6 +15,8 @@ dependencies {
     testImplementation project(':conductor-grpc-server')
     testImplementation project(':conductor-client')
     testImplementation project(':conductor-grpc-client')
+
+    testImplementation "org.springframework.retry:spring-retry"
 
     testImplementation "com.fasterxml.jackson.core:jackson-databind"
     testImplementation "com.fasterxml.jackson.core:jackson-core"

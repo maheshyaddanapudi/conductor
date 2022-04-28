@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Netflix, Inc.
+ * Copyright 2022 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,7 +12,6 @@
  */
 package com.netflix.conductor.service;
 
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,11 +34,9 @@ import com.netflix.conductor.common.run.ExternalStorageLocation;
 import com.netflix.conductor.common.run.SearchResult;
 import com.netflix.conductor.common.run.TaskSummary;
 import com.netflix.conductor.common.utils.ExternalPayloadStorage;
-import com.netflix.conductor.common.utils.RetryUtil;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.metrics.Monitors;
 
-@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Audit
 @Trace
 @Service
@@ -58,7 +55,7 @@ public class TaskServiceImpl implements TaskService {
      * Poll for a task of a certain type.
      *
      * @param taskType Task name
-     * @param workerId Id of the workflow
+     * @param workerId id of the workflow
      * @param domain Domain of the workflow
      * @return polled {@link Task}
      */
@@ -81,7 +78,7 @@ public class TaskServiceImpl implements TaskService {
      * Batch Poll for a task of a certain type.
      *
      * @param taskType Task Name
-     * @param workerId Id of the workflow
+     * @param workerId id of the workflow
      * @param domain Domain of the workflow
      * @param count Number of tasks
      * @param timeout Timeout for polling in milliseconds
@@ -115,7 +112,7 @@ public class TaskServiceImpl implements TaskService {
     /**
      * Get in progress task for a given workflow id.
      *
-     * @param workflowId Id of the workflow
+     * @param workflowId id of the workflow
      * @param taskReferenceName Task reference name.
      * @return instance of {@link Task}
      */
@@ -145,9 +142,9 @@ public class TaskServiceImpl implements TaskService {
     /**
      * Ack Task is received.
      *
-     * @param taskId Id of the task
-     * @param workerId Id of the worker
-     * @return `true|false` if task if received or not
+     * @param taskId id of the task
+     * @param workerId id of the worker
+     * @return `true|false` if task is received or not
      */
     public String ackTaskReceived(String taskId, String workerId) {
         LOGGER.debug("Ack received for task: {} from worker: {}", taskId, workerId);
@@ -157,27 +154,14 @@ public class TaskServiceImpl implements TaskService {
     /**
      * Ack Task is received.
      *
-     * @param taskId Id of the task
-     * @return `true|false` if task if received or not
+     * @param taskId id of the task
+     * @return `true|false` if task is received or not
      */
     public boolean ackTaskReceived(String taskId) {
         LOGGER.debug("Ack received for task: {}", taskId);
-        String ackTaskDesc = "Ack Task with taskId: " + taskId;
-        String ackTaskOperation = "ackTaskReceived";
         AtomicBoolean ackResult = new AtomicBoolean(false);
         try {
-            new RetryUtil<>()
-                    .retryOnException(
-                            () -> {
-                                ackResult.set(executionService.ackTaskReceived(taskId));
-                                return null;
-                            },
-                            null,
-                            null,
-                            3,
-                            ackTaskDesc,
-                            ackTaskOperation);
-
+            ackResult.set(executionService.ackTaskReceived(taskId));
         } catch (Exception e) {
             // Fail the task and let decide reevaluate the workflow, thereby preventing workflow
             // being stuck from transient ack errors.
@@ -191,12 +175,7 @@ public class TaskServiceImpl implements TaskService {
         return ackResult.get();
     }
 
-    /**
-     * Updates the task with FAILED status; On exception, fails the workflow.
-     *
-     * @param task
-     * @param errorMsg
-     */
+    /** Updates the task with FAILED status; On exception, fails the workflow. */
     private void failTask(Task task, String errorMsg) {
         try {
             TaskResult taskResult = new TaskResult();
@@ -219,7 +198,7 @@ public class TaskServiceImpl implements TaskService {
     /**
      * Log Task Execution Details.
      *
-     * @param taskId Id of the task
+     * @param taskId id of the task
      * @param log Details you want to log
      */
     public void log(String taskId, String log) {
@@ -229,7 +208,7 @@ public class TaskServiceImpl implements TaskService {
     /**
      * Get Task Execution Logs.
      *
-     * @param taskId Id of the task.
+     * @param taskId id of the task.
      * @return list of {@link TaskExecLog}
      */
     public List<TaskExecLog> getTaskLogs(String taskId) {
@@ -239,7 +218,7 @@ public class TaskServiceImpl implements TaskService {
     /**
      * Get task by Id.
      *
-     * @param taskId Id of the task.
+     * @param taskId id of the task.
      * @return instance of {@link Task}
      */
     public Task getTask(String taskId) {
@@ -253,7 +232,7 @@ public class TaskServiceImpl implements TaskService {
      * @param taskId ID of the task
      */
     public void removeTaskFromQueue(String taskType, String taskId) {
-        executionService.removeTaskfromQueue(taskId);
+        executionService.removeTaskFromQueue(taskId);
     }
 
     /**
@@ -262,7 +241,7 @@ public class TaskServiceImpl implements TaskService {
      * @param taskId ID of the task
      */
     public void removeTaskFromQueue(String taskId) {
-        executionService.removeTaskfromQueue(taskId);
+        executionService.removeTaskFromQueue(taskId);
     }
 
     /**
@@ -291,7 +270,7 @@ public class TaskServiceImpl implements TaskService {
      */
     public Map<String, Long> getAllQueueDetails() {
         return queueDAO.queuesDetail().entrySet().stream()
-                .sorted(Comparator.comparing(Entry::getKey))
+                .sorted(Entry.comparingByKey())
                 .collect(
                         Collectors.toMap(
                                 Entry::getKey,

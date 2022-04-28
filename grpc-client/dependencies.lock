@@ -6,7 +6,7 @@
     },
     "compileClasspath": {
         "com.google.api.grpc:proto-google-common-protos": {
-            "locked": "1.17.0",
+            "locked": "2.0.1",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
@@ -20,10 +20,10 @@
             ]
         },
         "com.google.errorprone:error_prone_annotations": {
-            "locked": "2.3.4",
+            "locked": "2.10.0",
             "transitive": [
                 "com.google.guava:guava",
-                "io.grpc:grpc-stub"
+                "io.grpc:grpc-api"
             ]
         },
         "com.google.guava:failureaccess": {
@@ -53,6 +53,7 @@
         "com.google.protobuf:protobuf-java": {
             "locked": "3.13.0",
             "transitive": [
+                "com.google.api.grpc:proto-google-common-protos",
                 "io.grpc:grpc-protobuf"
             ]
         },
@@ -63,7 +64,7 @@
             "project": true
         },
         "io.grpc:grpc-api": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-protobuf",
@@ -72,31 +73,31 @@
             ]
         },
         "io.grpc:grpc-context": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-api"
             ]
         },
         "io.grpc:grpc-core": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-netty"
             ]
         },
         "io.grpc:grpc-netty": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.grpc:grpc-protobuf": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.grpc:grpc-protobuf-lite": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
         },
         "io.grpc:grpc-stub": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.netty:netty-buffer": {
             "locked": "4.1.65.Final",
@@ -167,7 +168,7 @@
             "locked": "3.10"
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-core",
                 "org.apache.logging.log4j:log4j-jul",
@@ -176,19 +177,19 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-web"
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.checkerframework:checker-qual": {
             "locked": "3.5.0",
@@ -223,12 +224,6 @@
                 "com.netflix.conductor:conductor-common"
             ]
         },
-        "com.github.rholder:guava-retrying": {
-            "locked": "2.0.0",
-            "transitive": [
-                "com.netflix.conductor:conductor-common"
-            ]
-        },
         "com.google.android:annotations": {
             "locked": "4.1.1.4",
             "transitive": [
@@ -236,7 +231,7 @@
             ]
         },
         "com.google.api.grpc:proto-google-common-protos": {
-            "locked": "1.17.0",
+            "locked": "2.0.1",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
@@ -244,15 +239,10 @@
         "com.google.code.findbugs:jsr305": {
             "locked": "3.0.2",
             "transitive": [
-                "com.github.rholder:guava-retrying",
                 "com.google.guava:guava",
                 "io.grpc:grpc-api",
-                "io.grpc:grpc-core",
-                "io.grpc:grpc-netty",
                 "io.grpc:grpc-protobuf",
-                "io.grpc:grpc-protobuf-lite",
-                "io.grpc:grpc-stub",
-                "io.perfmark:perfmark-api"
+                "io.grpc:grpc-protobuf-lite"
             ]
         },
         "com.google.code.gson:gson": {
@@ -262,14 +252,12 @@
             ]
         },
         "com.google.errorprone:error_prone_annotations": {
-            "locked": "2.3.4",
+            "locked": "2.10.0",
             "transitive": [
                 "com.google.guava:guava",
                 "io.grpc:grpc-api",
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-netty",
-                "io.grpc:grpc-protobuf",
-                "io.grpc:grpc-protobuf-lite",
                 "io.grpc:grpc-stub"
             ]
         },
@@ -282,7 +270,6 @@
         "com.google.guava:guava": {
             "locked": "30.0-jre",
             "transitive": [
-                "com.github.rholder:guava-retrying",
                 "io.grpc:grpc-api",
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-netty",
@@ -306,6 +293,7 @@
         "com.google.protobuf:protobuf-java": {
             "locked": "3.13.0",
             "transitive": [
+                "com.google.api.grpc:proto-google-common-protos",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-grpc",
                 "io.grpc:grpc-protobuf"
@@ -327,7 +315,7 @@
             "project": true
         },
         "io.grpc:grpc-api": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-protobuf",
@@ -336,34 +324,34 @@
             ]
         },
         "io.grpc:grpc-context": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-api"
             ]
         },
         "io.grpc:grpc-core": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-netty"
             ]
         },
         "io.grpc:grpc-netty": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.grpc:grpc-protobuf": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "com.netflix.conductor:conductor-grpc"
             ]
         },
         "io.grpc:grpc-protobuf-lite": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
         },
         "io.grpc:grpc-stub": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "com.netflix.conductor:conductor-grpc"
             ]
@@ -455,7 +443,7 @@
             ]
         },
         "io.perfmark:perfmark-api": {
-            "locked": "0.19.0",
+            "locked": "0.25.0",
             "transitive": [
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-netty"
@@ -480,7 +468,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -492,7 +480,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -502,7 +490,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -510,7 +498,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -518,7 +506,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -532,14 +520,9 @@
             ]
         },
         "org.codehaus.mojo:animal-sniffer-annotations": {
-            "locked": "1.18",
+            "locked": "1.19",
             "transitive": [
-                "io.grpc:grpc-api",
-                "io.grpc:grpc-core",
-                "io.grpc:grpc-netty",
-                "io.grpc:grpc-protobuf",
-                "io.grpc:grpc-protobuf-lite",
-                "io.grpc:grpc-stub"
+                "io.grpc:grpc-core"
             ]
         },
         "org.slf4j:slf4j-api": {
@@ -551,7 +534,7 @@
     },
     "testCompileClasspath": {
         "com.google.api.grpc:proto-google-common-protos": {
-            "locked": "1.17.0",
+            "locked": "2.0.1",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
@@ -565,10 +548,10 @@
             ]
         },
         "com.google.errorprone:error_prone_annotations": {
-            "locked": "2.3.4",
+            "locked": "2.10.0",
             "transitive": [
                 "com.google.guava:guava",
-                "io.grpc:grpc-stub"
+                "io.grpc:grpc-api"
             ]
         },
         "com.google.guava:failureaccess": {
@@ -598,6 +581,7 @@
         "com.google.protobuf:protobuf-java": {
             "locked": "3.13.0",
             "transitive": [
+                "com.google.api.grpc:proto-google-common-protos",
                 "io.grpc:grpc-protobuf"
             ]
         },
@@ -620,7 +604,7 @@
             ]
         },
         "io.grpc:grpc-api": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-protobuf",
@@ -629,31 +613,31 @@
             ]
         },
         "io.grpc:grpc-context": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-api"
             ]
         },
         "io.grpc:grpc-core": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-netty"
             ]
         },
         "io.grpc:grpc-netty": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.grpc:grpc-protobuf": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.grpc:grpc-protobuf-lite": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
         },
         "io.grpc:grpc-stub": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.netty:netty-buffer": {
             "locked": "4.1.65.Final",
@@ -772,7 +756,7 @@
             "locked": "3.10"
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-core",
                 "org.apache.logging.log4j:log4j-jul",
@@ -781,26 +765,26 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.apache.logging.log4j:log4j-web",
                 "org.springframework.boot:spring-boot-starter-log4j2"
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.springframework.boot:spring-boot-starter-log4j2"
             ]
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "org.springframework.boot:spring-boot-starter-log4j2"
             ]
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0"
+            "locked": "2.17.1"
         },
         "org.apiguardian:apiguardian-api": {
             "locked": "1.1.0",
@@ -1062,12 +1046,6 @@
                 "com.netflix.conductor:conductor-common"
             ]
         },
-        "com.github.rholder:guava-retrying": {
-            "locked": "2.0.0",
-            "transitive": [
-                "com.netflix.conductor:conductor-common"
-            ]
-        },
         "com.google.android:annotations": {
             "locked": "4.1.1.4",
             "transitive": [
@@ -1075,7 +1053,7 @@
             ]
         },
         "com.google.api.grpc:proto-google-common-protos": {
-            "locked": "1.17.0",
+            "locked": "2.0.1",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
@@ -1083,15 +1061,10 @@
         "com.google.code.findbugs:jsr305": {
             "locked": "3.0.2",
             "transitive": [
-                "com.github.rholder:guava-retrying",
                 "com.google.guava:guava",
                 "io.grpc:grpc-api",
-                "io.grpc:grpc-core",
-                "io.grpc:grpc-netty",
                 "io.grpc:grpc-protobuf",
-                "io.grpc:grpc-protobuf-lite",
-                "io.grpc:grpc-stub",
-                "io.perfmark:perfmark-api"
+                "io.grpc:grpc-protobuf-lite"
             ]
         },
         "com.google.code.gson:gson": {
@@ -1101,14 +1074,12 @@
             ]
         },
         "com.google.errorprone:error_prone_annotations": {
-            "locked": "2.3.4",
+            "locked": "2.10.0",
             "transitive": [
                 "com.google.guava:guava",
                 "io.grpc:grpc-api",
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-netty",
-                "io.grpc:grpc-protobuf",
-                "io.grpc:grpc-protobuf-lite",
                 "io.grpc:grpc-stub"
             ]
         },
@@ -1121,7 +1092,6 @@
         "com.google.guava:guava": {
             "locked": "30.0-jre",
             "transitive": [
-                "com.github.rholder:guava-retrying",
                 "io.grpc:grpc-api",
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-netty",
@@ -1145,6 +1115,7 @@
         "com.google.protobuf:protobuf-java": {
             "locked": "3.13.0",
             "transitive": [
+                "com.google.api.grpc:proto-google-common-protos",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-grpc",
                 "io.grpc:grpc-protobuf"
@@ -1178,7 +1149,7 @@
             ]
         },
         "io.grpc:grpc-api": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-protobuf",
@@ -1187,34 +1158,34 @@
             ]
         },
         "io.grpc:grpc-context": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-api"
             ]
         },
         "io.grpc:grpc-core": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-netty"
             ]
         },
         "io.grpc:grpc-netty": {
-            "locked": "1.33.1"
+            "locked": "1.46.0"
         },
         "io.grpc:grpc-protobuf": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "com.netflix.conductor:conductor-grpc"
             ]
         },
         "io.grpc:grpc-protobuf-lite": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "io.grpc:grpc-protobuf"
             ]
         },
         "io.grpc:grpc-stub": {
-            "locked": "1.33.1",
+            "locked": "1.46.0",
             "transitive": [
                 "com.netflix.conductor:conductor-grpc"
             ]
@@ -1306,7 +1277,7 @@
             ]
         },
         "io.perfmark:perfmark-api": {
-            "locked": "0.19.0",
+            "locked": "0.25.0",
             "transitive": [
                 "io.grpc:grpc-core",
                 "io.grpc:grpc-netty"
@@ -1379,7 +1350,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-api": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -1391,7 +1362,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-core": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -1402,7 +1373,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-jul": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -1411,7 +1382,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-slf4j-impl": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -1420,7 +1391,7 @@
             ]
         },
         "org.apache.logging.log4j:log4j-web": {
-            "locked": "2.17.0",
+            "locked": "2.17.1",
             "transitive": [
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-common",
@@ -1451,14 +1422,9 @@
             ]
         },
         "org.codehaus.mojo:animal-sniffer-annotations": {
-            "locked": "1.18",
+            "locked": "1.19",
             "transitive": [
-                "io.grpc:grpc-api",
-                "io.grpc:grpc-core",
-                "io.grpc:grpc-netty",
-                "io.grpc:grpc-protobuf",
-                "io.grpc:grpc-protobuf-lite",
-                "io.grpc:grpc-stub"
+                "io.grpc:grpc-core"
             ]
         },
         "org.hamcrest:hamcrest": {
