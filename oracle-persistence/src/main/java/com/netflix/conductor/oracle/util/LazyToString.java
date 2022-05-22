@@ -14,9 +14,7 @@ package com.netflix.conductor.oracle.util;
 
 import java.util.function.Supplier;
 
-/**
- * Functional class to support the lazy execution of a String result.
- */
+/** Functional class to support the lazy execution of a String result. */
 public class LazyToString {
 
     private final Supplier<String> supplier;

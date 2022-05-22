@@ -30,43 +30,37 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.core.exception.ApplicationException;
 import com.netflix.conductor.core.exception.ApplicationException.Code;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import oracle.jdbc.OracleResultSet;
 
 /**
  * Represents a {@link PreparedStatement} that is wrapped with convenience methods and utilities.
- * <p>
- * This class simulates a parameter building pattern and all {@literal addParameter(*)} methods must be called in the
- * proper order of their expected binding sequence.
+ *
+ * <p>This class simulates a parameter building pattern and all {@literal addParameter(*)} methods
+ * must be called in the proper order of their expected binding sequence.
  *
  * @author mustafa
  */
 public class Query implements AutoCloseable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    /**
-     * The {@link ObjectMapper} instance to use for serializing/deserializing JSON.
-     */
+    /** The {@link ObjectMapper} instance to use for serializing/deserializing JSON. */
     protected final ObjectMapper objectMapper;
 
-    /**
-     * The initial supplied query String that was used to prepare {@link #statement}.
-     */
+    /** The initial supplied query String that was used to prepare {@link #statement}. */
     private final String rawQuery;
 
     /**
-     * Parameter index for the {@code ResultSet#set*(*)} methods, gets incremented every time a parameter is added to
-     * the {@code PreparedStatement} {@link #statement}.
+     * Parameter index for the {@code ResultSet#set*(*)} methods, gets incremented every time a
+     * parameter is added to the {@code PreparedStatement} {@link #statement}.
      */
     private final AtomicInteger index = new AtomicInteger(1);
 
-    /**
-     * The {@link PreparedStatement} that will be managed and executed by this class.
-     */
+    /** The {@link PreparedStatement} that will be managed and executed by this class. */
     private final PreparedStatement statement;
 
     public Query(ObjectMapper objectMapper, Connection connection, String query) {
@@ -76,13 +70,16 @@ public class Query implements AutoCloseable {
         try {
             this.statement = connection.prepareStatement(query);
         } catch (SQLException ex) {
-            throw new ApplicationException(Code.BACKEND_ERROR,
-                "Cannot prepare statement for query: " + ex.getMessage(), ex);
+            throw new ApplicationException(
+                    Code.BACKEND_ERROR,
+                    "Cannot prepare statement for query: " + ex.getMessage(),
+                    ex);
         }
     }
 
     /**
-     * Generate a String with {@literal count} number of '?' placeholders for {@link PreparedStatement} queries.
+     * Generate a String with {@literal count} number of '?' placeholders for {@link
+     * PreparedStatement} queries.
      *
      * @param count The number of '?' chars to generate.
      * @return a comma delimited string of {@literal count} '?' binding placeholders.
@@ -99,7 +96,7 @@ public class Query implements AutoCloseable {
     public Query addParameter(final String value) {
         return addParameterInternal((ps, idx) -> ps.setString(idx, value));
     }
-    
+
     public Query addParameter(final StringReader value) {
         return addParameterInternal((ps, idx) -> ps.setClob(idx, value));
     }
@@ -140,6 +137,7 @@ public class Query implements AutoCloseable {
 
     /**
      * Bind the given {@link java.util.Date} to the PreparedStatement as a {@link java.sql.Date}.
+     *
      * @param date The {@literal java.util.Date} to bind.
      * @return {@literal this}
      */
@@ -148,7 +146,9 @@ public class Query implements AutoCloseable {
     }
 
     /**
-     * Bind the given {@link java.util.Date} to the PreparedStatement as a {@link java.sql.Timestamp}.
+     * Bind the given {@link java.util.Date} to the PreparedStatement as a {@link
+     * java.sql.Timestamp}.
+     *
      * @param date The {@literal java.util.Date} to bind.
      * @return {@literal this}
      */
@@ -158,6 +158,7 @@ public class Query implements AutoCloseable {
 
     /**
      * Bind the given epoch millis to the PreparedStatement as a {@link java.sql.Timestamp}.
+     *
      * @param epochMillis The epoch ms to create a new {@literal Timestamp} from.
      * @return {@literal this}
      */
@@ -170,12 +171,12 @@ public class Query implements AutoCloseable {
      *
      * @param values The values to bind to the prepared statement.
      * @return {@literal this}
-     *
-     * @throws IllegalArgumentException If a non-primitive/unsupported type is encountered in the collection.
+     * @throws IllegalArgumentException If a non-primitive/unsupported type is encountered in the
+     *     collection.
      * @see #addParameters(Object...)
      */
     @SuppressWarnings("rawtypes")
-	public Query addParameters(Collection values) {
+    public Query addParameters(Collection values) {
         return addParameters(values.toArray());
     }
 
@@ -184,20 +185,19 @@ public class Query implements AutoCloseable {
      *
      * @param values The values to bind to the prepared statement.
      * @return {@literal this}
-     *
      * @throws IllegalArgumentException If a non-primitive/unsupported type is encountered.
      */
     public Query addParameters(Object... values) {
         for (Object v : values) {
-        	 if (v instanceof StringReader) {
-                 addParameter((StringReader) v);
-             } else if (v instanceof String) {
+            if (v instanceof StringReader) {
+                addParameter((StringReader) v);
+            } else if (v instanceof String) {
                 addParameter((String) v);
             } else if (v instanceof Integer) {
                 addParameter((Integer) v);
             } else if (v instanceof Long) {
                 addParameter((Long) v);
-            } else if(v instanceof Double) {
+            } else if (v instanceof Double) {
                 addParameter((Double) v);
             } else if (v instanceof Boolean) {
                 addParameter((Boolean) v);
@@ -207,7 +207,9 @@ public class Query implements AutoCloseable {
                 addParameter((Timestamp) v);
             } else {
                 throw new IllegalArgumentException(
-                    "Type " + v.getClass().getName() + " is not supported by automatic property assignment");
+                        "Type "
+                                + v.getClass().getName()
+                                + " is not supported by automatic property assignment");
             }
         }
 
@@ -215,14 +217,15 @@ public class Query implements AutoCloseable {
     }
 
     /**
-     * Utility method for evaluating the prepared statement as a query to check the existence of a record using a
-     * numeric count or boolean return value.
-     * <p>
-     * The {@link #rawQuery} provided must result in a {@link Number} or {@link Boolean} result.
+     * Utility method for evaluating the prepared statement as a query to check the existence of a
+     * record using a numeric count or boolean return value.
      *
-     * @return {@literal true} If a count query returned more than 0 or an exists query returns {@literal true}.
+     * <p>The {@link #rawQuery} provided must result in a {@link Number} or {@link Boolean} result.
      *
-     * @throws ApplicationException If an unexpected return type cannot be evaluated to a {@code Boolean} result.
+     * @return {@literal true} If a count query returned more than 0 or an exists query returns
+     *     {@literal true}.
+     * @throws ApplicationException If an unexpected return type cannot be evaluated to a {@code
+     *     Boolean} result.
      */
     public boolean exists() {
         Object val = executeScalar();
@@ -242,16 +245,16 @@ public class Query implements AutoCloseable {
             return convertLong(Integer.parseInt(String.valueOf(val))) > 0;
         }
 
-        throw new ApplicationException(Code.BACKEND_ERROR,
-            "Expected a Numeric or Boolean scalar return value from the query, received " +
-                val.getClass().getName());
+        throw new ApplicationException(
+                Code.BACKEND_ERROR,
+                "Expected a Numeric or Boolean scalar return value from the query, received "
+                        + val.getClass().getName());
     }
 
     /**
      * Convenience method for executing delete statements.
      *
      * @return {@literal true} if the statement affected 1 or more rows.
-     *
      * @see #executeUpdate()
      */
     public boolean executeDelete() {
@@ -264,8 +267,8 @@ public class Query implements AutoCloseable {
     }
 
     /**
-     * Convenience method for executing statements that return a single numeric value,
-     * typically {@literal SELECT COUNT...} style queries.
+     * Convenience method for executing statements that return a single numeric value, typically
+     * {@literal SELECT COUNT...} style queries.
      *
      * @return The result of the query as a {@literal long}.
      */
@@ -283,7 +286,7 @@ public class Query implements AutoCloseable {
             if (logger.isTraceEnabled()) {
                 start = System.currentTimeMillis();
             }
-            
+
             final int val = this.statement.executeUpdate();
 
             if (null != start && logger.isTraceEnabled()) {
@@ -299,15 +302,13 @@ public class Query implements AutoCloseable {
 
     /**
      * Execute a query from the PreparedStatement and return the ResultSet.
-     * <p>
      *
-     * <em>NOTE:</em> The returned ResultSet must be closed/managed by the calling methods.
+     * <p><em>NOTE:</em> The returned ResultSet must be closed/managed by the calling methods.
      *
      * @return {@link PreparedStatement#executeQuery()}
-     *
      * @throws ApplicationException If any SQL errors occur.
      */
-    public ResultSet executeQuery(){
+    public ResultSet executeQuery() {
         Long start = null;
         if (logger.isTraceEnabled()) {
             start = System.currentTimeMillis();
@@ -334,28 +335,27 @@ public class Query implements AutoCloseable {
                 return null;
             }
             try {
-            	
-            	OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
-        		Clob clob = oracleResultSet.getCLOB(1);
-        		
-        		return null!=clob ? ClobHandler.clobToString(clob) : null;
-        		
-            	/*Blob blob = oracleResultSet.getBlob(1);
-            	 if(null!=blob) {
-                 	StringBuilder textBuilder = new StringBuilder();
-                     try (Reader reader = new BufferedReader(new InputStreamReader
-                       (blob.getBinaryStream(), Charset.forName(StandardCharsets.UTF_8.name())))) {
-                         int c = 0;
-                         while ((c = reader.read()) != -1) {
-                             textBuilder.append((char) c);
-                         }
-                     }
-                    
-                 	 return textBuilder.toString();
-                 }*/
-            }
-            catch(Exception e) {
-            	return rs.getObject(1);
+
+                OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
+                Clob clob = oracleResultSet.getCLOB(1);
+
+                return null != clob ? ClobHandler.clobToString(clob) : null;
+
+                /*Blob blob = oracleResultSet.getBlob(1);
+                if(null!=blob) {
+                   	StringBuilder textBuilder = new StringBuilder();
+                       try (Reader reader = new BufferedReader(new InputStreamReader
+                         (blob.getBinaryStream(), Charset.forName(StandardCharsets.UTF_8.name())))) {
+                           int c = 0;
+                           while ((c = reader.read()) != -1) {
+                               textBuilder.append((char) c);
+                           }
+                       }
+
+                   	 return textBuilder.toString();
+                   }*/
+            } catch (Exception e) {
+                return rs.getObject(1);
             }
         } catch (SQLException ex) {
             throw new ApplicationException(Code.BACKEND_ERROR, ex);
@@ -367,10 +367,10 @@ public class Query implements AutoCloseable {
      *
      * @param returnType The type to return.
      * @param <V> The type parameter to return a List of.
-     * @return A single result from the execution of the statement, as a type of {@literal returnType}.
-     *
-     * @throws ApplicationException {@literal returnType} is unsupported, cannot be cast to from the result, or any SQL
-     * errors occur.
+     * @return A single result from the execution of the statement, as a type of {@literal
+     *     returnType}.
+     * @throws ApplicationException {@literal returnType} is unsupported, cannot be cast to from the
+     *     result, or any SQL errors occur.
      */
     public <V> V executeScalar(Class<V> returnType) {
         try (ResultSet rs = executeQuery()) {
@@ -398,9 +398,8 @@ public class Query implements AutoCloseable {
      * @param returnType The type Class return a List of.
      * @param <V> The type parameter to return a List of.
      * @return A {@code List<returnType>}.
-     *
-     * @throws ApplicationException {@literal returnType} is unsupported, cannot be cast to from the result, or any SQL
-     * errors occur.
+     * @throws ApplicationException {@literal returnType} is unsupported, cannot be cast to from the
+     *     result, or any SQL errors occur.
      */
     public <V> List<V> executeScalarList(Class<V> returnType) {
         try (ResultSet rs = executeQuery()) {
@@ -430,47 +429,45 @@ public class Query implements AutoCloseable {
     }
 
     /**
-     * Execute the PreparedStatement and return a List of {@literal returnType} values from the ResultSet.
+     * Execute the PreparedStatement and return a List of {@literal returnType} values from the
+     * ResultSet.
      *
      * @param returnType The type Class return a List of.
      * @param <V> The type parameter to return a List of.
      * @return A {@code List<returnType>}.
-     *
-     * @throws ApplicationException {@literal returnType} is unsupported, cannot be cast to from the result, or any SQL
-     * errors occur.
+     * @throws ApplicationException {@literal returnType} is unsupported, cannot be cast to from the
+     *     result, or any SQL errors occur.
      */
     public <V> List<V> executeAndFetch(Class<V> returnType) {
         try (ResultSet rs = executeQuery()) {
             List<V> list = new ArrayList<>();
             while (rs.next()) {
-            	
+
                 try {
-                	OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
-            		Clob clob = oracleResultSet.getCLOB(1);
-            		if(null!=clob) 
-            			list.add(convert(ClobHandler.clobToString(clob), returnType));
-            		
-                	/*Blob blob = oracleResultSet.getBlob(1);
-                	 if(null!=blob) {
-                     	StringBuilder textBuilder = new StringBuilder();
-                         try (Reader reader = new BufferedReader(new InputStreamReader
-                           (blob.getBinaryStream(), Charset.forName(StandardCharsets.UTF_8.name())))) {
-                             int c = 0;
-                             while ((c = reader.read()) != -1) {
-                                 textBuilder.append((char) c);
-                             }
-                         }
-                        
-                        
-                     	
-                     	 list.add(convert(textBuilder.toString(), returnType));
-                     }*/
-                	
+                    OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
+                    Clob clob = oracleResultSet.getCLOB(1);
+                    if (null != clob) list.add(convert(ClobHandler.clobToString(clob), returnType));
+
+                    /*Blob blob = oracleResultSet.getBlob(1);
+                    if(null!=blob) {
+                       	StringBuilder textBuilder = new StringBuilder();
+                           try (Reader reader = new BufferedReader(new InputStreamReader
+                             (blob.getBinaryStream(), Charset.forName(StandardCharsets.UTF_8.name())))) {
+                               int c = 0;
+                               while ((c = reader.read()) != -1) {
+                                   textBuilder.append((char) c);
+                               }
+                           }
+
+
+
+                       	 list.add(convert(textBuilder.toString(), returnType));
+                       }*/
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    list.add(convert(rs.getObject(1), returnType));
                 }
-            	catch(Exception e) {
-            		e.printStackTrace();
-            		list.add(convert(rs.getObject(1), returnType));
-            	}
             }
             return list;
         } catch (SQLException ex) {
@@ -510,7 +507,8 @@ public class Query implements AutoCloseable {
             setter.apply(this.statement, index);
             return this;
         } catch (SQLException ex) {
-            throw new ApplicationException(Code.BACKEND_ERROR, "Could not apply bind parameter at index " + index, ex);
+            throw new ApplicationException(
+                    Code.BACKEND_ERROR, "Could not apply bind parameter at index " + index, ex);
         }
     }
 
@@ -532,33 +530,33 @@ public class Query implements AutoCloseable {
         } else if (Timestamp.class == returnType) {
             value = rs.getTimestamp(1);
         } else {
-        	 try {
-        		OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
-        		Clob clob = oracleResultSet.getCLOB(1);
-        		
-        		value = null != clob ? ClobHandler.clobToString(clob) : null;
-        		
-             	/*Blob blob = oracleResultSet.getBlob(1);
-             	 if(null!=blob) {
-                 	StringBuilder textBuilder = new StringBuilder();
-                     try (Reader reader = new BufferedReader(new InputStreamReader
-                       (blob.getBinaryStream(), Charset.forName(StandardCharsets.UTF_8.name())))) {
-                         int c = 0;
-                         while ((c = reader.read()) != -1) {
-                             textBuilder.append((char) c);
-                         }
-                     }
-                    
-                     value = textBuilder.toString();
-                 }*/
-             }
-             catch(Exception e) {
-            	 value = rs.getObject(1);
-             }
+            try {
+                OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
+                Clob clob = oracleResultSet.getCLOB(1);
+
+                value = null != clob ? ClobHandler.clobToString(clob) : null;
+
+                /*Blob blob = oracleResultSet.getBlob(1);
+                if(null!=blob) {
+                  	StringBuilder textBuilder = new StringBuilder();
+                      try (Reader reader = new BufferedReader(new InputStreamReader
+                        (blob.getBinaryStream(), Charset.forName(StandardCharsets.UTF_8.name())))) {
+                          int c = 0;
+                          while ((c = reader.read()) != -1) {
+                              textBuilder.append((char) c);
+                          }
+                      }
+
+                      value = textBuilder.toString();
+                  }*/
+            } catch (Exception e) {
+                value = rs.getObject(1);
+            }
         }
 
         if (null == value) {
-            throw new NullPointerException("Cannot get value from ResultSet of type " + returnType.getName());
+            throw new NullPointerException(
+                    "Cannot get value from ResultSet of type " + returnType.getName());
         }
 
         return returnType.cast(value);
@@ -581,7 +579,8 @@ public class Query implements AutoCloseable {
 
         final String vName = value.getClass().getName();
         final String rName = returnType.getName();
-        throw new ApplicationException(Code.BACKEND_ERROR, "Cannot convert type " + vName + " to " + rName);
+        throw new ApplicationException(
+                Code.BACKEND_ERROR, "Cannot convert type " + vName + " to " + rName);
     }
 
     protected Integer convertInt(Object value) {
@@ -657,10 +656,12 @@ public class Query implements AutoCloseable {
         }
 
         String text = value.toString().trim();
-        return "Y".equalsIgnoreCase(text) || "YES".equalsIgnoreCase(text) || "TRUE".equalsIgnoreCase(text) ||
-            "T".equalsIgnoreCase(text) || "1".equalsIgnoreCase(text);
+        return "Y".equalsIgnoreCase(text)
+                || "YES".equalsIgnoreCase(text)
+                || "TRUE".equalsIgnoreCase(text)
+                || "T".equalsIgnoreCase(text)
+                || "1".equalsIgnoreCase(text);
     }
-
 
     protected String toJson(Object value) {
         if (null == value) {
@@ -676,14 +677,16 @@ public class Query implements AutoCloseable {
 
     protected <V> V fromJson(String value, Class<V> returnType) {
         if (null == value) {
-        	return null;
+            return null;
         }
 
         try {
             return objectMapper.readValue(value, returnType);
         } catch (IOException ex) {
-            throw new ApplicationException(Code.BACKEND_ERROR,
-                "Could not convert JSON '" + value + "' to " + returnType.getName(), ex);
+            throw new ApplicationException(
+                    Code.BACKEND_ERROR,
+                    "Could not convert JSON '" + value + "' to " + returnType.getName(),
+                    ex);
         }
     }
 

@@ -22,37 +22,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ClobHandler {
-	
-	private static Logger log = LoggerFactory.getLogger(ClobHandler.class.getSimpleName());
 
-	public static String clobToString(Clob data)
-	{
-	    final StringBuilder sb = new StringBuilder();
+    private static Logger log = LoggerFactory.getLogger(ClobHandler.class.getSimpleName());
 
-	    try
-	    {
-	        final Reader         reader = data.getCharacterStream();
-	        final BufferedReader br     = new BufferedReader(reader);
+    public static String clobToString(Clob data) {
+        final StringBuilder sb = new StringBuilder();
 
-	        int b;
-	        while(-1 != (b = br.read()))
-	        {
-	            sb.append((char)b);
-	        }
+        try {
+            final Reader reader = data.getCharacterStream();
+            final BufferedReader br = new BufferedReader(reader);
 
-	        br.close();
-	    }
-	    catch (SQLException e)
-	    {
-	        log.error("SQL. Could not convert CLOB to string",e);
-	        return e.toString();
-	    }
-	    catch (IOException e)
-	    {
-	        log.error("IO. Could not convert CLOB to string",e);
-	        return e.toString();
-	    }
+            int b;
+            while (-1 != (b = br.read())) {
+                sb.append((char) b);
+            }
 
-	    return sb.toString();
-	}
+            br.close();
+        } catch (SQLException e) {
+            log.error("SQL. Could not convert CLOB to string", e);
+            return e.toString();
+        } catch (IOException e) {
+            log.error("IO. Could not convert CLOB to string", e);
+            return e.toString();
+        }
+
+        return sb.toString();
+    }
 }

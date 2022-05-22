@@ -1,25 +1,16 @@
 /*
- *  Copyright 2021 Netflix, Inc.
- *  <p>
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- *  the License. You may obtain a copy of the License at
- *  <p>
- *  http://www.apache.org/licenses/LICENSE-2.0
- *  <p>
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- *  an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations under the License.
+ * Copyright 2021 Netflix, Inc.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package com.netflix.conductor.oracle.dao;
-
-import static com.netflix.conductor.core.exception.ApplicationException.Code.CONFLICT;
-import static com.netflix.conductor.core.exception.ApplicationException.Code.NOT_FOUND;
-import static org.hamcrest.Matchers.hasProperty;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +31,6 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
@@ -48,36 +38,43 @@ import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.core.exception.ApplicationException;
 import com.netflix.conductor.oracle.config.OracleProperties;
 import com.netflix.conductor.oracle.config.OracleTestConfiguration;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, OracleTestConfiguration.class})
+import static com.netflix.conductor.core.exception.ApplicationException.Code.CONFLICT;
+import static com.netflix.conductor.core.exception.ApplicationException.Code.NOT_FOUND;
+
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+@ContextConfiguration(
+        classes = {TestObjectMapperConfiguration.class, OracleTestConfiguration.class})
 @RunWith(SpringRunner.class)
 public class OracleMetadataDAOTest {
 
     private OracleMetadataDAO metadataDAO;
-    
-    @Autowired
-    private OracleProperties oracleProperties;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private OracleProperties oracleProperties;
 
-    @Rule
-    public TestName name = new TestName();
+    @Autowired private ObjectMapper objectMapper;
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
+    @Rule public TestName name = new TestName();
 
-    @Autowired
-    public HikariDataSource dataSource;
-    
-    @Autowired
-    public RetryTemplate retryTemplate;
+    @Rule public ExpectedException thrown = ExpectedException.none();
+
+    @Autowired public HikariDataSource dataSource;
+
+    @Autowired public RetryTemplate retryTemplate;
 
     @Before
     public void setup() {
-    	metadataDAO = new OracleMetadataDAO(objectMapper, dataSource,retryTemplate,
-    			oracleProperties);
+        metadataDAO =
+                new OracleMetadataDAO(objectMapper, dataSource, retryTemplate, oracleProperties);
     }
 
     @Test
@@ -274,7 +271,7 @@ public class OracleMetadataDAOTest {
 
         List<EventHandler> byEvents = metadataDAO.getEventHandlersForEvent(event1, true);
         assertNotNull(byEvents);
-        assertEquals(0, byEvents.size());        //event is marked as in-active
+        assertEquals(0, byEvents.size()); // event is marked as in-active
 
         eventHandler.setActive(true);
         eventHandler.setEvent(event2);

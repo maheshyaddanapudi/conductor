@@ -26,27 +26,31 @@ import javax.sql.DataSource;
 
 import org.springframework.retry.support.RetryTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.oracle.util.ClobHandler;
 import com.netflix.conductor.oracle.util.Query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.Uninterruptibles;
 import oracle.jdbc.OracleResultSet;
 
 public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
     private static final Long UNACK_SCHEDULE_MS = 60_000L;
 
-    public OracleQueueDAO(ObjectMapper objectMapper, DataSource dataSource, RetryTemplate retryTemplate) {
+    public OracleQueueDAO(
+            ObjectMapper objectMapper, DataSource dataSource, RetryTemplate retryTemplate) {
         super(objectMapper, dataSource, retryTemplate);
 
         Executors.newSingleThreadScheduledExecutor()
-            .scheduleAtFixedRate(this::processAllUnacks,
-                UNACK_SCHEDULE_MS, UNACK_SCHEDULE_MS, TimeUnit.MILLISECONDS);
+                .scheduleAtFixedRate(
+                        this::processAllUnacks,
+                        UNACK_SCHEDULE_MS,
+                        UNACK_SCHEDULE_MS,
+                        TimeUnit.MILLISECONDS);
         logger.debug(OracleQueueDAO.class.getName() + " is ready to serve");
     }
 
@@ -57,14 +61,23 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
     @Override
     public void push(String queueName, String messageId, int priority, long offsetTimeInSecond) {
-        withTransaction(tx -> pushMessage(tx, queueName, messageId, null, priority, offsetTimeInSecond));
+        withTransaction(
+                tx -> pushMessage(tx, queueName, messageId, null, priority, offsetTimeInSecond));
     }
 
     @Override
     public void push(String queueName, List<Message> messages) {
-        withTransaction(tx -> messages
-            .forEach(message -> pushMessage(tx, queueName, message.getId(), message.getPayload(), message.getPriority(),
-                0)));
+        withTransaction(
+                tx ->
+                        messages.forEach(
+                                message ->
+                                        pushMessage(
+                                                tx,
+                                                queueName,
+                                                message.getId(),
+                                                message.getPayload(),
+                                                message.getPriority(),
+                                                0)));
     }
 
     @Override
@@ -73,20 +86,23 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
     }
 
     @Override
-    public boolean pushIfNotExists(String queueName, String messageId, int priority, long offsetTimeInSecond) {
-        return getWithRetriedTransactions(tx -> {
-            if (!existsMessage(tx, queueName, messageId)) {
-                pushMessage(tx, queueName, messageId, null, priority, offsetTimeInSecond);
-                return true;
-            }
-            return false;
-        });
+    public boolean pushIfNotExists(
+            String queueName, String messageId, int priority, long offsetTimeInSecond) {
+        return getWithRetriedTransactions(
+                tx -> {
+                    if (!existsMessage(tx, queueName, messageId)) {
+                        pushMessage(tx, queueName, messageId, null, priority, offsetTimeInSecond);
+                        return true;
+                    }
+                    return false;
+                });
     }
 
     @Override
     public List<String> pop(String queueName, int count, int timeout) {
-    	List<Message> messages = getWithTransactionWithOutErrorPropagation(
-            tx -> popMessages(tx, queueName, count, timeout));
+        List<Message> messages =
+                getWithTransactionWithOutErrorPropagation(
+                        tx -> popMessages(tx, queueName, count, timeout));
         if (messages == null) {
             return new ArrayList<>();
         }
@@ -95,8 +111,9 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
     @Override
     public List<Message> pollMessages(String queueName, int count, int timeout) {
-    	List<Message> messages = getWithTransactionWithOutErrorPropagation(
-            tx -> popMessages(tx, queueName, count, timeout));
+        List<Message> messages =
+                getWithTransactionWithOutErrorPropagation(
+                        tx -> popMessages(tx, queueName, count, timeout));
         if (messages == null) {
             return new ArrayList<>();
         }
@@ -111,7 +128,8 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
     @Override
     public int getSize(String queueName) {
         final String GET_QUEUE_SIZE = "SELECT COUNT(*) FROM queue_message WHERE queue_name = ?";
-        return queryWithTransaction(GET_QUEUE_SIZE, q -> ((Long) q.addParameter(queueName).executeCount()).intValue());
+        return queryWithTransaction(
+                GET_QUEUE_SIZE, q -> ((Long) q.addParameter(queueName).executeCount()).intValue());
     }
 
     @Override
@@ -123,11 +141,18 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
     public boolean setUnackTimeout(String queueName, String messageId, long unackTimeout) {
         long updatedOffsetTimeInSecond = unackTimeout / 1000;
 
-        final String UPDATE_UNACK_TIMEOUT = "UPDATE queue_message SET offset_time_seconds = ?, deliver_on = (CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')) WHERE queue_name = ? AND message_id = ?";
+        final String UPDATE_UNACK_TIMEOUT =
+                "UPDATE queue_message SET offset_time_seconds = ?, deliver_on = (CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')) WHERE queue_name = ? AND message_id = ?";
 
-        return queryWithTransaction(UPDATE_UNACK_TIMEOUT,
-            q -> q.addParameter(updatedOffsetTimeInSecond).addParameter(updatedOffsetTimeInSecond)
-                .addParameter(queueName).addParameter(messageId).executeUpdate()) == 1;
+        return queryWithTransaction(
+                        UPDATE_UNACK_TIMEOUT,
+                        q ->
+                                q.addParameter(updatedOffsetTimeInSecond)
+                                        .addParameter(updatedOffsetTimeInSecond)
+                                        .addParameter(queueName)
+                                        .addParameter(messageId)
+                                        .executeUpdate())
+                == 1;
     }
 
     @Override
@@ -138,39 +163,60 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
     @Override
     public Map<String, Long> queuesDetail() {
-        final String GET_QUEUES_DETAIL = "SELECT queue_name, (SELECT count(*) FROM queue_message WHERE popped = 'N' AND queue_name = q.queue_name) FROM queue q";
-        return queryWithTransaction(GET_QUEUES_DETAIL, q -> q.executeAndFetch(rs -> {
-            Map<String, Long> detail = Maps.newHashMap();
-            while (rs.next()) {
-                String queueName = rs.getString(1);
-                Long size = rs.getLong(2);
-                detail.put(queueName, size);
-            }
-            return detail;
-        }));
+        final String GET_QUEUES_DETAIL =
+                "SELECT queue_name, (SELECT count(*) FROM queue_message WHERE popped = 'N' AND queue_name = q.queue_name) FROM queue q";
+        return queryWithTransaction(
+                GET_QUEUES_DETAIL,
+                q ->
+                        q.executeAndFetch(
+                                rs -> {
+                                    Map<String, Long> detail = Maps.newHashMap();
+                                    while (rs.next()) {
+                                        String queueName = rs.getString(1);
+                                        Long size = rs.getLong(2);
+                                        detail.put(queueName, size);
+                                    }
+                                    return detail;
+                                }));
     }
 
     @Override
     public Map<String, Map<String, Map<String, Long>>> queuesDetailVerbose() {
         // @formatter:off
-        final String GET_QUEUES_DETAIL_VERBOSE = "SELECT queue_name, \n"
-            + "       (SELECT count(*) FROM queue_message WHERE popped = 'N' AND queue_name = q.queue_name),\n"
-            + "       (SELECT count(*) FROM queue_message WHERE popped = 'Y' AND queue_name = q.queue_name)\n"
-            + "FROM queue q";
+        final String GET_QUEUES_DETAIL_VERBOSE =
+                "SELECT queue_name, \n"
+                        + "       (SELECT count(*) FROM queue_message WHERE popped = 'N' AND queue_name = q.queue_name),\n"
+                        + "       (SELECT count(*) FROM queue_message WHERE popped = 'Y' AND queue_name = q.queue_name)\n"
+                        + "FROM queue q";
         // @formatter:on
 
-        return queryWithTransaction(GET_QUEUES_DETAIL_VERBOSE, q -> q.executeAndFetch(rs -> {
-            Map<String, Map<String, Map<String, Long>>> result = Maps.newHashMap();
-            while (rs.next()) {
-                String queueName = rs.getString(1);
-                Long size = rs.getLong(2);
-                Long queueUnacked = rs.getLong(3);
-                result.put(queueName, ImmutableMap.of("a", ImmutableMap.of( // sharding not implemented, returning only
-                    // one shard with all the info
-                    "size", size, "uacked", queueUnacked)));
-            }
-            return result;
-        }));
+        return queryWithTransaction(
+                GET_QUEUES_DETAIL_VERBOSE,
+                q ->
+                        q.executeAndFetch(
+                                rs -> {
+                                    Map<String, Map<String, Map<String, Long>>> result =
+                                            Maps.newHashMap();
+                                    while (rs.next()) {
+                                        String queueName = rs.getString(1);
+                                        Long size = rs.getLong(2);
+                                        Long queueUnacked = rs.getLong(3);
+                                        result.put(
+                                                queueName,
+                                                ImmutableMap.of(
+                                                        "a",
+                                                        ImmutableMap
+                                                                .of( // sharding not implemented,
+                                                                        // returning only
+                                                                        // one shard with all the
+                                                                        // info
+                                                                        "size",
+                                                                        size,
+                                                                        "uacked",
+                                                                        queueUnacked)));
+                                    }
+                                    return result;
+                                }));
     }
 
     /**
@@ -182,97 +228,137 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
         logger.trace("processAllUnacks started");
 
-        final String PROCESS_ALL_UNACKS = "UPDATE queue_message SET popped = 'N' WHERE popped = 'Y' AND (CURRENT_TIMESTAMP - NUMTODSINTERVAL(60,'SECOND')) > deliver_on";
+        final String PROCESS_ALL_UNACKS =
+                "UPDATE queue_message SET popped = 'N' WHERE popped = 'Y' AND (CURRENT_TIMESTAMP - NUMTODSINTERVAL(60,'SECOND')) > deliver_on";
         executeWithTransaction(PROCESS_ALL_UNACKS, Query::executeUpdate);
     }
 
     @Override
     public void processUnacks(String queueName) {
-        final String PROCESS_UNACKS = "UPDATE queue_message SET popped = 'N' WHERE queue_name = ? AND popped = 'Y' AND (CURRENT_TIMESTAMP - NUMTODSINTERVAL(60,'SECOND'))  > deliver_on";
+        final String PROCESS_UNACKS =
+                "UPDATE queue_message SET popped = 'N' WHERE queue_name = ? AND popped = 'Y' AND (CURRENT_TIMESTAMP - NUMTODSINTERVAL(60,'SECOND'))  > deliver_on";
         executeWithTransaction(PROCESS_UNACKS, q -> q.addParameter(queueName).executeUpdate());
     }
 
     @Override
     public boolean resetOffsetTime(String queueName, String messageId) {
-        long offsetTimeInSecond = 0;    // Reset to 0
+        long offsetTimeInSecond = 0; // Reset to 0
         final String SET_OFFSET_TIME =
-            "UPDATE queue_message SET offset_time_seconds = ?, deliver_on = (CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')) \n"
-                + "WHERE queue_name = ? AND message_id = ?";
+                "UPDATE queue_message SET offset_time_seconds = ?, deliver_on = (CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')) \n"
+                        + "WHERE queue_name = ? AND message_id = ?";
 
-        return queryWithTransaction(SET_OFFSET_TIME, q -> q.addParameter(offsetTimeInSecond)
-            .addParameter(offsetTimeInSecond).addParameter(queueName).addParameter(messageId).executeUpdate() == 1);
+        return queryWithTransaction(
+                SET_OFFSET_TIME,
+                q ->
+                        q.addParameter(offsetTimeInSecond)
+                                        .addParameter(offsetTimeInSecond)
+                                        .addParameter(queueName)
+                                        .addParameter(messageId)
+                                        .executeUpdate()
+                                == 1);
     }
 
     private boolean existsMessage(Connection connection, String queueName, String messageId) {
-        final String EXISTS_MESSAGE = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM queue_message WHERE queue_name = ? AND message_id = ?)";
-        return query(connection, EXISTS_MESSAGE, q -> q.addParameter(queueName).addParameter(messageId).exists());
+        final String EXISTS_MESSAGE =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM queue_message WHERE queue_name = ? AND message_id = ?)";
+        return query(
+                connection,
+                EXISTS_MESSAGE,
+                q -> q.addParameter(queueName).addParameter(messageId).exists());
     }
 
-    private void pushMessage(Connection connection, String queueName, String messageId, String payload,
-        Integer priority,
-        long offsetTimeInSecond) {
-        
+    private void pushMessage(
+            Connection connection,
+            String queueName,
+            String messageId,
+            String payload,
+            Integer priority,
+            long offsetTimeInSecond) {
+
         createQueueIfNotExists(connection, queueName);
 
-        String UPDATE_MESSAGE = "UPDATE queue_message SET payload=?, deliver_on=(CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')) WHERE queue_name = ? AND message_id = ?";
-        int rowsUpdated = query(connection, UPDATE_MESSAGE,
-            q -> q.addParameter(payload).addParameter(offsetTimeInSecond)
-                .addParameter(queueName).addParameter(messageId).executeUpdate());
+        String UPDATE_MESSAGE =
+                "UPDATE queue_message SET payload=?, deliver_on=(CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')) WHERE queue_name = ? AND message_id = ?";
+        int rowsUpdated =
+                query(
+                        connection,
+                        UPDATE_MESSAGE,
+                        q ->
+                                q.addParameter(payload)
+                                        .addParameter(offsetTimeInSecond)
+                                        .addParameter(queueName)
+                                        .addParameter(messageId)
+                                        .executeUpdate());
 
         if (rowsUpdated == 0) {
-            String PUSH_MESSAGE = "INSERT INTO queue_message(deliver_on, offset_time_seconds, queue_name, message_id, priority, payload) VALUES ((CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')), ?, ?, ?, ?, ?)";
-            execute(connection, PUSH_MESSAGE, q -> 
-            q.addParameter(offsetTimeInSecond)
-            .addParameter(offsetTimeInSecond)
-            .addParameter(queueName)
-            .addParameter(messageId)
-            .addParameter(priority)
-            .addParameter(payload).executeUpdate());
+            String PUSH_MESSAGE =
+                    "INSERT INTO queue_message(deliver_on, offset_time_seconds, queue_name, message_id, priority, payload) VALUES ((CURRENT_TIMESTAMP + NUMTODSINTERVAL(?,'SECOND')), ?, ?, ?, ?, ?)";
+            execute(
+                    connection,
+                    PUSH_MESSAGE,
+                    q ->
+                            q.addParameter(offsetTimeInSecond)
+                                    .addParameter(offsetTimeInSecond)
+                                    .addParameter(queueName)
+                                    .addParameter(messageId)
+                                    .addParameter(priority)
+                                    .addParameter(payload)
+                                    .executeUpdate());
         }
-        
-       
     }
 
     private boolean removeMessage(Connection connection, String queueName, String messageId) {
-        final String REMOVE_MESSAGE = "DELETE FROM queue_message WHERE queue_name = ? AND message_id = ?";
-        return query(connection, REMOVE_MESSAGE,
-            q -> q.addParameter(queueName).addParameter(messageId).executeDelete());
+        final String REMOVE_MESSAGE =
+                "DELETE FROM queue_message WHERE queue_name = ? AND message_id = ?";
+        return query(
+                connection,
+                REMOVE_MESSAGE,
+                q -> q.addParameter(queueName).addParameter(messageId).executeDelete());
     }
 
     private List<Message> peekMessages(Connection connection, String queueName, int count) {
-    	
-    	if (count < 1) {
+
+        if (count < 1) {
             return Collections.emptyList();
         }
 
-        final String PEEK_MESSAGES = "SELECT /*+ INDEX(queue_message combo_queue_message) */ message_id, priority, payload FROM queue_message WHERE queue_name = ? AND popped = 'N' AND deliver_on <= (CURRENT_TIMESTAMP + NUMTODSINTERVAL(1/1000000,'SECOND')) AND ROWNUM <= ? ORDER BY priority DESC, deliver_on, created_on";
+        final String PEEK_MESSAGES =
+                "SELECT /*+ INDEX(queue_message combo_queue_message) */ message_id, priority, payload FROM queue_message WHERE queue_name = ? AND popped = 'N' AND deliver_on <= (CURRENT_TIMESTAMP + NUMTODSINTERVAL(1/1000000,'SECOND')) AND ROWNUM <= ? ORDER BY priority DESC, deliver_on, created_on";
 
-        return query(connection, PEEK_MESSAGES, p -> p.addParameter(queueName)
-            .addParameter(count).executeAndFetch(rs -> {
-                List<Message> results = new ArrayList<>();
-                while (rs.next()) {
-                	Message m = new Message();
-                    m.setId(rs.getString("message_id"));
-                    m.setPriority(rs.getInt("priority"));
-                    try {
-                    	
-                    	OracleResultSet oracleResultSet = rs.unwrap(OracleResultSet.class);
-                		Clob clob = oracleResultSet.getCLOB("payload");
-                		if(null!=clob)
-                			m.setPayload(ClobHandler.clobToString(clob));
-                    }
-                    catch(Exception e) {
-                    	
-                    	m.setPayload(rs.getString("payload"));
-                    }
-                    
-                    results.add(m);
-                }
-                return results;
-            }));
+        return query(
+                connection,
+                PEEK_MESSAGES,
+                p ->
+                        p.addParameter(queueName)
+                                .addParameter(count)
+                                .executeAndFetch(
+                                        rs -> {
+                                            List<Message> results = new ArrayList<>();
+                                            while (rs.next()) {
+                                                Message m = new Message();
+                                                m.setId(rs.getString("message_id"));
+                                                m.setPriority(rs.getInt("priority"));
+                                                try {
+
+                                                    OracleResultSet oracleResultSet =
+                                                            rs.unwrap(OracleResultSet.class);
+                                                    Clob clob = oracleResultSet.getCLOB("payload");
+                                                    if (null != clob)
+                                                        m.setPayload(
+                                                                ClobHandler.clobToString(clob));
+                                                } catch (Exception e) {
+
+                                                    m.setPayload(rs.getString("payload"));
+                                                }
+
+                                                results.add(m);
+                                            }
+                                            return results;
+                                        }));
     }
 
-    private List<Message> popMessages(Connection connection, String queueName, int count, int timeout) {
+    private List<Message> popMessages(
+            Connection connection, String queueName, int count, int timeout) {
         long start = System.currentTimeMillis();
         List<Message> messages = peekMessages(connection, queueName, count);
 
@@ -287,9 +373,16 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
         List<Message> poppedMessages = new ArrayList<>();
         for (Message message : messages) {
-            final String POP_MESSAGE = "UPDATE queue_message SET popped = 'Y' WHERE queue_name = ? AND message_id = ? AND popped = 'N'";
-            int result = query(connection, POP_MESSAGE,
-                q -> q.addParameter(queueName).addParameter(message.getId()).executeUpdate());
+            final String POP_MESSAGE =
+                    "UPDATE queue_message SET popped = 'Y' WHERE queue_name = ? AND message_id = ? AND popped = 'N'";
+            int result =
+                    query(
+                            connection,
+                            POP_MESSAGE,
+                            q ->
+                                    q.addParameter(queueName)
+                                            .addParameter(message.getId())
+                                            .executeUpdate());
 
             if (result == 1) {
                 poppedMessages.add(message);
@@ -300,18 +393,21 @@ public class OracleQueueDAO extends OracleBaseDAO implements QueueDAO {
 
     private void createQueueIfNotExists(Connection connection, String queueName) {
         logger.trace("Creating new queue '{}'", queueName);
-        final String EXISTS_QUEUE = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM queue WHERE queue_name = ?)";
+        final String EXISTS_QUEUE =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM queue WHERE queue_name = ?)";
         boolean exists = query(connection, EXISTS_QUEUE, q -> q.addParameter(queueName).exists());
         if (!exists) {
-            final String CREATE_QUEUE = "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (queue (queue_name)) */ INTO queue (queue_name) VALUES (?)";
+            final String CREATE_QUEUE =
+                    "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (queue (queue_name)) */ INTO queue (queue_name) VALUES (?)";
             execute(connection, CREATE_QUEUE, q -> q.addParameter(queueName).executeUpdate());
         }
     }
 
     @Override
     public boolean containsMessage(String queueName, String messageId) {
-        final String EXISTS_QUEUE = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM queue_message WHERE queue_name = ? AND message_id = ? )";
-        return queryWithTransaction(EXISTS_QUEUE,
-            q -> q.addParameter(queueName).addParameter(messageId).exists());
+        final String EXISTS_QUEUE =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM queue_message WHERE queue_name = ? AND message_id = ? )";
+        return queryWithTransaction(
+                EXISTS_QUEUE, q -> q.addParameter(queueName).addParameter(messageId).exists());
     }
 }

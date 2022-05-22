@@ -12,8 +12,6 @@
  */
 package com.netflix.conductor.oracle.dao;
 
-import static com.netflix.conductor.core.exception.ApplicationException.Code.BACKEND_ERROR;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -30,11 +28,6 @@ import javax.sql.DataSource;
 
 import org.springframework.retry.support.RetryTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.netflix.conductor.common.metadata.events.EventExecution;
 import com.netflix.conductor.common.metadata.tasks.PollData;
 import com.netflix.conductor.common.metadata.tasks.Task;
@@ -49,9 +42,19 @@ import com.netflix.conductor.model.TaskModel;
 import com.netflix.conductor.model.WorkflowModel;
 import com.netflix.conductor.oracle.util.Query;
 
-public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, RateLimitingDAO, PollDataDAO, ConcurrentExecutionLimitDAO {
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
-    public OracleExecutionDAO(ObjectMapper objectMapper, DataSource dataSource, RetryTemplate retryTemplate) {
+import static com.netflix.conductor.core.exception.ApplicationException.Code.BACKEND_ERROR;
+
+public class OracleExecutionDAO extends OracleBaseDAO
+        implements ExecutionDAO, RateLimitingDAO, PollDataDAO, ConcurrentExecutionLimitDAO {
+
+    public OracleExecutionDAO(
+            ObjectMapper objectMapper, DataSource dataSource, RetryTemplate retryTemplate) {
         super(objectMapper, dataSource, retryTemplate);
     }
 
@@ -68,12 +71,18 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
     @Override
     public List<TaskModel> getPendingTasksByWorkflow(String taskDefName, String workflowId) {
         // @formatter:off
-        String GET_IN_PROGRESS_TASKS_FOR_WORKFLOW = "SELECT json_data FROM task_in_progress tip "
-            + "INNER JOIN task t ON t.task_id = tip.task_id " + "WHERE task_def_name = ? AND workflow_id = ?";
+        String GET_IN_PROGRESS_TASKS_FOR_WORKFLOW =
+                "SELECT json_data FROM task_in_progress tip "
+                        + "INNER JOIN task t ON t.task_id = tip.task_id "
+                        + "WHERE task_def_name = ? AND workflow_id = ?";
         // @formatter:on
 
-        return queryWithTransaction(GET_IN_PROGRESS_TASKS_FOR_WORKFLOW,
-            q -> q.addParameter(taskDefName).addParameter(workflowId).executeAndFetch(TaskModel.class));
+        return queryWithTransaction(
+                GET_IN_PROGRESS_TASKS_FOR_WORKFLOW,
+                q ->
+                        q.addParameter(taskDefName)
+                                .addParameter(workflowId)
+                                .executeAndFetch(TaskModel.class));
     }
 
     @Override
@@ -110,30 +119,36 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
     public List<TaskModel> createTasks(List<TaskModel> tasks) {
         List<TaskModel> created = Lists.newArrayListWithCapacity(tasks.size());
 
-        withTransaction(connection -> {
-            for (TaskModel task : tasks) {
-                validate(task);
+        withTransaction(
+                connection -> {
+                    for (TaskModel task : tasks) {
+                        validate(task);
 
-                task.setScheduledTime(System.currentTimeMillis());
+                        task.setScheduledTime(System.currentTimeMillis());
 
-                final String taskKey = taskKey(task);
+                        final String taskKey = taskKey(task);
 
-                boolean scheduledTaskAdded = addScheduledTask(connection, task, taskKey);
+                        boolean scheduledTaskAdded = addScheduledTask(connection, task, taskKey);
 
-                if (!scheduledTaskAdded) {
-                    logger.trace("Task already scheduled, skipping the run " + task.getTaskId() + ", ref="
-                        + task.getReferenceTaskName() + ", key=" + taskKey);
-                    continue;
-                }
+                        if (!scheduledTaskAdded) {
+                            logger.trace(
+                                    "Task already scheduled, skipping the run "
+                                            + task.getTaskId()
+                                            + ", ref="
+                                            + task.getReferenceTaskName()
+                                            + ", key="
+                                            + taskKey);
+                            continue;
+                        }
 
-                insertOrUpdateTaskData(connection, task);
-                addWorkflowToTaskMapping(connection, task);
-                addTaskInProgress(connection, task);
-                updateTask(connection, task);
+                        insertOrUpdateTaskData(connection, task);
+                        addWorkflowToTaskMapping(connection, task);
+                        addTaskInProgress(connection, task);
+                        updateTask(connection, task);
 
-                created.add(task);
-            }
-        });
+                        created.add(task);
+                    }
+                });
 
         return created;
     }
@@ -175,18 +190,25 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
             return true;
         }
 
-        logger.info("Task execution count for {}: limit={}, current={}", task.getTaskDefName(), limit,
-            getInProgressTaskCount(task.getTaskDefName()));
+        logger.info(
+                "Task execution count for {}: limit={}, current={}",
+                task.getTaskDefName(),
+                limit,
+                getInProgressTaskCount(task.getTaskDefName()));
 
         String taskId = task.getTaskId();
 
-        List<String> tasksInProgressInOrderOfArrival = findAllTasksInProgressInOrderOfArrival(task, limit);
+        List<String> tasksInProgressInOrderOfArrival =
+                findAllTasksInProgressInOrderOfArrival(task, limit);
 
         boolean rateLimited = !tasksInProgressInOrderOfArrival.contains(taskId);
 
         if (rateLimited) {
-            logger.info("Task execution count limited. {}, limit {}, current {}", task.getTaskDefName(), limit,
-                getInProgressTaskCount(task.getTaskDefName()));
+            logger.info(
+                    "Task execution count limited. {}, limit {}, current {}",
+                    task.getTaskDefName(),
+                    limit,
+                    getInProgressTaskCount(task.getTaskDefName()));
             Monitors.recordTaskConcurrentExecutionLimited(task.getTaskDefName(), limit);
         }
 
@@ -204,19 +226,21 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
 
         final String taskKey = taskKey(task);
 
-        withTransaction(connection -> {
-            removeScheduledTask(connection, task, taskKey);
-            removeWorkflowToTaskMapping(connection, task);
-            removeTaskInProgress(connection, task);
-            removeTaskData(connection, task);
-        });
+        withTransaction(
+                connection -> {
+                    removeScheduledTask(connection, task, taskKey);
+                    removeWorkflowToTaskMapping(connection, task);
+                    removeTaskInProgress(connection, task);
+                    removeTaskData(connection, task);
+                });
         return true;
     }
 
     @Override
     public TaskModel getTask(String taskId) {
         String GET_TASK = "SELECT json_data FROM task WHERE task_id = ?";
-        return queryWithTransaction(GET_TASK, q -> q.addParameter(taskId).executeAndFetchFirst(TaskModel.class));
+        return queryWithTransaction(
+                GET_TASK, q -> q.addParameter(taskId).executeAndFetchFirst(TaskModel.class));
     }
 
     @Override
@@ -231,21 +255,32 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
     public List<TaskModel> getPendingTasksForTaskType(String taskName) {
         Preconditions.checkNotNull(taskName, "task name cannot be null");
         // @formatter:off
-        String GET_IN_PROGRESS_TASKS_FOR_TYPE = "SELECT json_data FROM task_in_progress tip "
-            + "INNER JOIN task t ON t.task_id = tip.task_id " + "WHERE task_def_name = ?";
+        String GET_IN_PROGRESS_TASKS_FOR_TYPE =
+                "SELECT json_data FROM task_in_progress tip "
+                        + "INNER JOIN task t ON t.task_id = tip.task_id "
+                        + "WHERE task_def_name = ?";
         // @formatter:on
 
-        return queryWithTransaction(GET_IN_PROGRESS_TASKS_FOR_TYPE,
-            q -> q.addParameter(taskName).executeAndFetch(TaskModel.class));
+        return queryWithTransaction(
+                GET_IN_PROGRESS_TASKS_FOR_TYPE,
+                q -> q.addParameter(taskName).executeAndFetch(TaskModel.class));
     }
 
     @Override
     public List<TaskModel> getTasksForWorkflow(String workflowId) {
-        String GET_TASKS_FOR_WORKFLOW = "SELECT task_id FROM workflow_to_task WHERE workflow_id = ?";
-        return getWithRetriedTransactions(tx -> query(tx, GET_TASKS_FOR_WORKFLOW, q -> {
-            List<String> taskIds = q.addParameter(workflowId).executeScalarList(String.class);
-            return getTasks(tx, taskIds);
-        }));
+        String GET_TASKS_FOR_WORKFLOW =
+                "SELECT task_id FROM workflow_to_task WHERE workflow_id = ?";
+        return getWithRetriedTransactions(
+                tx ->
+                        query(
+                                tx,
+                                GET_TASKS_FOR_WORKFLOW,
+                                q -> {
+                                    List<String> taskIds =
+                                            q.addParameter(workflowId)
+                                                    .executeScalarList(String.class);
+                                    return getTasks(tx, taskIds);
+                                }));
     }
 
     @Override
@@ -258,11 +293,12 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
         boolean removed = false;
         WorkflowModel workflow = getWorkflow(workflowId, true);
         if (workflow != null) {
-            withTransaction(connection -> {
-                removeWorkflowDefToWorkflowMapping(connection, workflow);
-                removeWorkflow(connection, workflowId);
-                removePendingWorkflow(connection, workflow.getWorkflowName(), workflowId);
-            });
+            withTransaction(
+                    connection -> {
+                        removeWorkflowDefToWorkflowMapping(connection, workflow);
+                        removeWorkflow(connection, workflowId);
+                        removePendingWorkflow(connection, workflow.getWorkflowName(), workflowId);
+                    });
             removed = true;
 
             for (TaskModel task : workflow.getTasks()) {
@@ -280,7 +316,7 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
     @Override
     public boolean removeWorkflowWithExpiry(String workflowId, int ttlSeconds) {
         throw new UnsupportedOperationException(
-            "This method is not implemented in MySQLExecutionDAO. Please use RedisDAO mode instead for using TTLs.");
+                "This method is not implemented in MySQLExecutionDAO. Please use RedisDAO mode instead for using TTLs.");
     }
 
     @Override
@@ -295,7 +331,7 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
 
     @Override
     public WorkflowModel getWorkflow(String workflowId, boolean includeTasks) {
-    	WorkflowModel workflow = getWithRetriedTransactions(tx -> readWorkflow(tx, workflowId));
+        WorkflowModel workflow = getWithRetriedTransactions(tx -> readWorkflow(tx, workflowId));
 
         if (workflow != null) {
             if (includeTasks) {
@@ -309,86 +345,114 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
 
     /**
      * @param workflowName name of the workflow
-     * @param version      the workflow version
-     * @return list of workflow ids that are in RUNNING state
-     * <em>returns workflows of all versions for the given workflow name</em>
+     * @param version the workflow version
+     * @return list of workflow ids that are in RUNNING state <em>returns workflows of all versions
+     *     for the given workflow name</em>
      */
     @Override
     public List<String> getRunningWorkflowIds(String workflowName, int version) {
         Preconditions.checkNotNull(workflowName, "workflowName cannot be null");
-        String GET_PENDING_WORKFLOW_IDS = "SELECT workflow_id FROM workflow_pending WHERE workflow_type = ?";
+        String GET_PENDING_WORKFLOW_IDS =
+                "SELECT workflow_id FROM workflow_pending WHERE workflow_type = ?";
 
-        return queryWithTransaction(GET_PENDING_WORKFLOW_IDS,
-            q -> q.addParameter(workflowName).executeScalarList(String.class));
+        return queryWithTransaction(
+                GET_PENDING_WORKFLOW_IDS,
+                q -> q.addParameter(workflowName).executeScalarList(String.class));
     }
 
     /**
      * @param workflowName Name of the workflow
-     * @param version      the workflow version
+     * @param version the workflow version
      * @return list of workflows that are in RUNNING state
      */
     @Override
     public List<WorkflowModel> getPendingWorkflowsByType(String workflowName, int version) {
         Preconditions.checkNotNull(workflowName, "workflowName cannot be null");
         return getRunningWorkflowIds(workflowName, version).stream()
-            .map(this::getWorkflow)
-            .filter(workflow -> workflow.getWorkflowVersion() == version)
-            .collect(Collectors.toList());
+                .map(this::getWorkflow)
+                .filter(workflow -> workflow.getWorkflowVersion() == version)
+                .collect(Collectors.toList());
     }
 
     @Override
     public long getPendingWorkflowCount(String workflowName) {
         Preconditions.checkNotNull(workflowName, "workflowName cannot be null");
-        String GET_PENDING_WORKFLOW_COUNT = "SELECT COUNT(*) FROM workflow_pending WHERE workflow_type = ?";
+        String GET_PENDING_WORKFLOW_COUNT =
+                "SELECT COUNT(*) FROM workflow_pending WHERE workflow_type = ?";
 
-        return queryWithTransaction(GET_PENDING_WORKFLOW_COUNT, q -> q.addParameter(workflowName).executeCount());
+        return queryWithTransaction(
+                GET_PENDING_WORKFLOW_COUNT, q -> q.addParameter(workflowName).executeCount());
     }
 
     @Override
     public long getInProgressTaskCount(String taskDefName) {
-        String GET_IN_PROGRESS_TASK_COUNT = "SELECT COUNT(*) FROM task_in_progress WHERE task_def_name = ? AND in_progress_status = 'Y'";
+        String GET_IN_PROGRESS_TASK_COUNT =
+                "SELECT COUNT(*) FROM task_in_progress WHERE task_def_name = ? AND in_progress_status = 'Y'";
 
-        return queryWithTransaction(GET_IN_PROGRESS_TASK_COUNT, q -> q.addParameter(taskDefName).executeCount());
+        return queryWithTransaction(
+                GET_IN_PROGRESS_TASK_COUNT, q -> q.addParameter(taskDefName).executeCount());
     }
 
     @Override
-    public List<WorkflowModel> getWorkflowsByType(String workflowName, Long startTime, Long endTime) {
+    public List<WorkflowModel> getWorkflowsByType(
+            String workflowName, Long startTime, Long endTime) {
         Preconditions.checkNotNull(workflowName, "workflowName cannot be null");
         Preconditions.checkNotNull(startTime, "startTime cannot be null");
         Preconditions.checkNotNull(endTime, "endTime cannot be null");
 
         List<WorkflowModel> workflows = new LinkedList<>();
 
-        withTransaction(tx -> {
-            // @formatter:off
-            String GET_ALL_WORKFLOWS_FOR_WORKFLOW_DEF = "SELECT workflow_id FROM workflow_def_to_workflow "
-                + "WHERE workflow_def = ? AND date_str BETWEEN ? AND ?";
-            // @formatter:on
+        withTransaction(
+                tx -> {
+                    // @formatter:off
+                    String GET_ALL_WORKFLOWS_FOR_WORKFLOW_DEF =
+                            "SELECT workflow_id FROM workflow_def_to_workflow "
+                                    + "WHERE workflow_def = ? AND date_str BETWEEN ? AND ?";
+                    // @formatter:on
 
-            List<String> workflowIds = query(tx, GET_ALL_WORKFLOWS_FOR_WORKFLOW_DEF, q -> q.addParameter(workflowName)
-                .addParameter(dateStr(startTime)).addParameter(dateStr(endTime)).executeScalarList(String.class));
-            workflowIds.forEach(workflowId -> {
-                try {
-                	WorkflowModel wf = getWorkflow(workflowId);
-                    if (wf.getCreateTime() >= startTime && wf.getCreateTime() <= endTime) {
-                        workflows.add(wf);
-                    }
-                } catch (Exception e) {
-                    logger.error("Unable to load workflow id {} with name {}", workflowId, workflowName, e);
-                }
-            });
-        });
+                    List<String> workflowIds =
+                            query(
+                                    tx,
+                                    GET_ALL_WORKFLOWS_FOR_WORKFLOW_DEF,
+                                    q ->
+                                            q.addParameter(workflowName)
+                                                    .addParameter(dateStr(startTime))
+                                                    .addParameter(dateStr(endTime))
+                                                    .executeScalarList(String.class));
+                    workflowIds.forEach(
+                            workflowId -> {
+                                try {
+                                    WorkflowModel wf = getWorkflow(workflowId);
+                                    if (wf.getCreateTime() >= startTime
+                                            && wf.getCreateTime() <= endTime) {
+                                        workflows.add(wf);
+                                    }
+                                } catch (Exception e) {
+                                    logger.error(
+                                            "Unable to load workflow id {} with name {}",
+                                            workflowId,
+                                            workflowName,
+                                            e);
+                                }
+                            });
+                });
 
         return workflows;
     }
 
     @Override
-    public List<WorkflowModel> getWorkflowsByCorrelationId(String workflowName, String correlationId, boolean includeTasks) {
+    public List<WorkflowModel> getWorkflowsByCorrelationId(
+            String workflowName, String correlationId, boolean includeTasks) {
         Preconditions.checkNotNull(correlationId, "correlationId cannot be null");
-        String GET_WORKFLOWS_BY_CORRELATION_ID = "SELECT w.json_data FROM workflow w left join workflow_def_to_workflow wd on w.workflow_id = wd.workflow_id  WHERE w.correlation_id = ? and wd.workflow_def = ?";
+        String GET_WORKFLOWS_BY_CORRELATION_ID =
+                "SELECT w.json_data FROM workflow w left join workflow_def_to_workflow wd on w.workflow_id = wd.workflow_id  WHERE w.correlation_id = ? and wd.workflow_def = ?";
 
-        return queryWithTransaction(GET_WORKFLOWS_BY_CORRELATION_ID,
-            q -> q.addParameter(correlationId).addParameter(workflowName).executeAndFetch(WorkflowModel.class));
+        return queryWithTransaction(
+                GET_WORKFLOWS_BY_CORRELATION_ID,
+                q ->
+                        q.addParameter(correlationId)
+                                .addParameter(workflowName)
+                                .executeAndFetch(WorkflowModel.class));
     }
 
     @Override
@@ -401,8 +465,10 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
         try {
             return getWithRetriedTransactions(tx -> insertEventExecution(tx, eventExecution));
         } catch (Exception e) {
-            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR,
-                "Unable to add event execution " + eventExecution.getId(), e);
+            throw new ApplicationException(
+                    ApplicationException.Code.BACKEND_ERROR,
+                    "Unable to add event execution " + eventExecution.getId(),
+                    e);
         }
     }
 
@@ -411,8 +477,10 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
         try {
             withTransaction(tx -> removeEventExecution(tx, eventExecution));
         } catch (Exception e) {
-            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR,
-                "Unable to remove event execution " + eventExecution.getId(), e);
+            throw new ApplicationException(
+                    ApplicationException.Code.BACKEND_ERROR,
+                    "Unable to remove event execution " + eventExecution.getId(),
+                    e);
         }
     }
 
@@ -421,31 +489,44 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
         try {
             withTransaction(tx -> updateEventExecution(tx, eventExecution));
         } catch (Exception e) {
-            throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR,
-                "Unable to update event execution " + eventExecution.getId(), e);
+            throw new ApplicationException(
+                    ApplicationException.Code.BACKEND_ERROR,
+                    "Unable to update event execution " + eventExecution.getId(),
+                    e);
         }
     }
 
-    public List<EventExecution> getEventExecutions(String eventHandlerName, String eventName, String messageId,
-        int max) {
+    public List<EventExecution> getEventExecutions(
+            String eventHandlerName, String eventName, String messageId, int max) {
         try {
             List<EventExecution> executions = Lists.newLinkedList();
-            withTransaction(tx -> {
-                for (int i = 0; i < max; i++) {
-                    String executionId = messageId + "_" + i; // see SimpleEventProcessor.handle to understand how the
-                    // execution id is set
-                    EventExecution ee = readEventExecution(tx, eventHandlerName, eventName, messageId, executionId);
-                    if (ee == null) {
-                        break;
-                    }
-                    executions.add(ee);
-                }
-            });
+            withTransaction(
+                    tx -> {
+                        for (int i = 0; i < max; i++) {
+                            String executionId =
+                                    messageId + "_"
+                                            + i; // see SimpleEventProcessor.handle to understand
+                            // how the
+                            // execution id is set
+                            EventExecution ee =
+                                    readEventExecution(
+                                            tx,
+                                            eventHandlerName,
+                                            eventName,
+                                            messageId,
+                                            executionId);
+                            if (ee == null) {
+                                break;
+                            }
+                            executions.add(ee);
+                        }
+                    });
             return executions;
         } catch (Exception e) {
-            String message = String.format(
-                "Unable to get event executions for eventHandlerName=%s, eventName=%s, messageId=%s",
-                eventHandlerName, eventName, messageId);
+            String message =
+                    String.format(
+                            "Unable to get event executions for eventHandlerName=%s, eventName=%s, messageId=%s",
+                            eventHandlerName, eventName, messageId);
             throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, message, e);
         }
     }
@@ -496,11 +577,15 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
 
         // Generate a formatted query string with a variable number of bind params based
         // on taskIds.size()
-        final String GET_TASKS_FOR_IDS = String.format(
-            "SELECT json_data FROM task WHERE task_id IN (%s) AND json_data IS NOT NULL",
-            Query.generateInBindings(taskIds.size()));
+        final String GET_TASKS_FOR_IDS =
+                String.format(
+                        "SELECT json_data FROM task WHERE task_id IN (%s) AND json_data IS NOT NULL",
+                        Query.generateInBindings(taskIds.size()));
 
-        return query(connection, GET_TASKS_FOR_IDS, q -> q.addParameters(taskIds).executeAndFetch(TaskModel.class));
+        return query(
+                connection,
+                GET_TASKS_FOR_IDS,
+                q -> q.addParameters(taskIds).executeAndFetch(TaskModel.class));
     }
 
     private String insertOrUpdateWorkflow(WorkflowModel workflow, boolean update) {
@@ -511,20 +596,23 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
         List<TaskModel> tasks = workflow.getTasks();
         workflow.setTasks(Lists.newLinkedList());
 
-        withTransaction(tx -> {
-            if (!update) {
-                addWorkflow(tx, workflow);
-                addWorkflowDefToWorkflowMapping(tx, workflow);
-            } else {
-                updateWorkflow(tx, workflow);
-            }
+        withTransaction(
+                tx -> {
+                    if (!update) {
+                        addWorkflow(tx, workflow);
+                        addWorkflowDefToWorkflowMapping(tx, workflow);
+                    } else {
+                        updateWorkflow(tx, workflow);
+                    }
 
-            if (terminal) {
-                removePendingWorkflow(tx, workflow.getWorkflowName(), workflow.getWorkflowId());
-            } else {
-                addPendingWorkflow(tx, workflow.getWorkflowName(), workflow.getWorkflowId());
-            }
-        });
+                    if (terminal) {
+                        removePendingWorkflow(
+                                tx, workflow.getWorkflowName(), workflow.getWorkflowId());
+                    } else {
+                        addPendingWorkflow(
+                                tx, workflow.getWorkflowName(), workflow.getWorkflowId());
+                    }
+                });
 
         workflow.setTasks(tasks);
         return workflow.getWorkflowId();
@@ -534,7 +622,8 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
         Optional<TaskDef> taskDefinition = task.getTaskDefinition();
 
         if (taskDefinition.isPresent() && taskDefinition.get().concurrencyLimit() > 0) {
-            boolean inProgress = task.getStatus() != null && task.getStatus().equals(Task.Status.IN_PROGRESS);
+            boolean inProgress =
+                    task.getStatus() != null && task.getStatus().equals(Task.Status.IN_PROGRESS);
             updateInProgressStatus(connection, task, inProgress ? "Y" : "N");
         }
 
@@ -550,39 +639,53 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
     private WorkflowModel readWorkflow(Connection connection, String workflowId) {
         String GET_WORKFLOW = "SELECT json_data FROM workflow WHERE workflow_id = ?";
 
-        return query(connection, GET_WORKFLOW, q -> q.addParameter(workflowId).executeAndFetchFirst(WorkflowModel.class));
+        return query(
+                connection,
+                GET_WORKFLOW,
+                q -> q.addParameter(workflowId).executeAndFetchFirst(WorkflowModel.class));
     }
 
     private void addWorkflow(Connection connection, WorkflowModel workflow) {
-        String INSERT_WORKFLOW = "INSERT INTO workflow (workflow_id, correlation_id, json_data) VALUES (?, ?, ?)";
-        
-        try {
-        	ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    		String json = ow.writeValueAsString(workflow);
+        String INSERT_WORKFLOW =
+                "INSERT INTO workflow (workflow_id, correlation_id, json_data) VALUES (?, ?, ?)";
 
-            execute(connection, INSERT_WORKFLOW, q -> q.addParameter(workflow.getWorkflowId())
-                    .addParameter(workflow.getCorrelationId()).addParameter(json).executeUpdate());
-            
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(workflow);
+
+            execute(
+                    connection,
+                    INSERT_WORKFLOW,
+                    q ->
+                            q.addParameter(workflow.getWorkflowId())
+                                    .addParameter(workflow.getCorrelationId())
+                                    .addParameter(json)
+                                    .executeUpdate());
+
+        } catch (IOException e) {
+            logger.error("Error while inserting Workflow JSON DATA - {}", e.getMessage());
         }
-        catch (IOException e) {
-			logger.error("Error while inserting Workflow JSON DATA - {}", e.getMessage());
-		}
     }
 
     private void updateWorkflow(Connection connection, WorkflowModel workflow) {
-        String UPDATE_WORKFLOW = "UPDATE workflow SET json_data = ?, modified_on = CURRENT_TIMESTAMP WHERE workflow_id = ?";
-        
-        try {
-        	ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    		String json = ow.writeValueAsString(workflow);
+        String UPDATE_WORKFLOW =
+                "UPDATE workflow SET json_data = ?, modified_on = CURRENT_TIMESTAMP WHERE workflow_id = ?";
 
-            execute(connection, UPDATE_WORKFLOW,
-                    q -> q.addParameter(json).addParameter(workflow.getWorkflowId()).executeUpdate());
-            
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(workflow);
+
+            execute(
+                    connection,
+                    UPDATE_WORKFLOW,
+                    q ->
+                            q.addParameter(json)
+                                    .addParameter(workflow.getWorkflowId())
+                                    .executeUpdate());
+
+        } catch (IOException e) {
+            logger.error("Error while updating Worklow JSON DATA - {}", e.getMessage());
         }
-        catch (IOException e) {
-			logger.error("Error while updating Worklow JSON DATA - {}", e.getMessage());
-		}
     }
 
     private void removeWorkflow(Connection connection, String workflowId) {
@@ -592,24 +695,35 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
 
     private void addPendingWorkflow(Connection connection, String workflowType, String workflowId) {
 
-        String EXISTS_PENDING_WORKFLOW = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM workflow_pending WHERE workflow_type = ? AND workflow_id = ?)";
+        String EXISTS_PENDING_WORKFLOW =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM workflow_pending WHERE workflow_type = ? AND workflow_id = ?)";
 
-        boolean exists = query(connection, EXISTS_PENDING_WORKFLOW,
-            q -> q.addParameter(workflowType).addParameter(workflowId).exists());
+        boolean exists =
+                query(
+                        connection,
+                        EXISTS_PENDING_WORKFLOW,
+                        q -> q.addParameter(workflowType).addParameter(workflowId).exists());
 
         if (!exists) {
-            String INSERT_PENDING_WORKFLOW = "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (workflow_pending (workflow_type, workflow_id)) */ INTO workflow_pending (workflow_type, workflow_id) VALUES (?, ?)";
+            String INSERT_PENDING_WORKFLOW =
+                    "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (workflow_pending (workflow_type, workflow_id)) */ INTO workflow_pending (workflow_type, workflow_id) VALUES (?, ?)";
 
-            execute(connection, INSERT_PENDING_WORKFLOW,
-                q -> q.addParameter(workflowType).addParameter(workflowId).executeUpdate());
+            execute(
+                    connection,
+                    INSERT_PENDING_WORKFLOW,
+                    q -> q.addParameter(workflowType).addParameter(workflowId).executeUpdate());
         }
     }
 
-    private void removePendingWorkflow(Connection connection, String workflowType, String workflowId) {
-        String REMOVE_PENDING_WORKFLOW = "DELETE FROM workflow_pending WHERE workflow_type = ? AND workflow_id = ?";
+    private void removePendingWorkflow(
+            Connection connection, String workflowType, String workflowId) {
+        String REMOVE_PENDING_WORKFLOW =
+                "DELETE FROM workflow_pending WHERE workflow_type = ? AND workflow_id = ?";
 
-        execute(connection, REMOVE_PENDING_WORKFLOW,
-            q -> q.addParameter(workflowType).addParameter(workflowId).executeDelete());
+        execute(
+                connection,
+                REMOVE_PENDING_WORKFLOW,
+                q -> q.addParameter(workflowType).addParameter(workflowId).executeDelete());
     }
 
     private void insertOrUpdateTaskData(Connection connection, TaskModel task) {
@@ -617,25 +731,34 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
          * Most times the row will be updated so let's try the update first. This used to be an 'INSERT/ON DUPLICATE KEY update' sql statement. The problem with that
          * is that if we try the INSERT first, the sequence will be increased even if the ON DUPLICATE KEY happens.
          */
-    	
-    	try {
-    		ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    		String json = ow.writeValueAsString(task);
 
-            String UPDATE_TASK = "UPDATE task SET json_data=?, modified_on=CURRENT_TIMESTAMP WHERE task_id=?";
-            int rowsUpdated = query(connection, UPDATE_TASK,
-                q -> q.addParameter(json).addParameter(task.getTaskId()).executeUpdate());
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(task);
+
+            String UPDATE_TASK =
+                    "UPDATE task SET json_data=?, modified_on=CURRENT_TIMESTAMP WHERE task_id=?";
+            int rowsUpdated =
+                    query(
+                            connection,
+                            UPDATE_TASK,
+                            q ->
+                                    q.addParameter(json)
+                                            .addParameter(task.getTaskId())
+                                            .executeUpdate());
 
             if (rowsUpdated == 0) {
-                String INSERT_TASK = "INSERT INTO task(task_id, json_data, modified_on) VALUES (?, ?, CURRENT_TIMESTAMP)";
-                execute(connection, INSERT_TASK,
-                    q -> q.addParameter(task.getTaskId()).addParameter(json).executeUpdate());
+                String INSERT_TASK =
+                        "INSERT INTO task(task_id, json_data, modified_on) VALUES (?, ?, CURRENT_TIMESTAMP)";
+                execute(
+                        connection,
+                        INSERT_TASK,
+                        q -> q.addParameter(task.getTaskId()).addParameter(json).executeUpdate());
             }
-            
+
+        } catch (IOException e) {
+            logger.error("Error while inserting Task JSON DATA - {}", e.getMessage());
         }
-        catch (IOException e) {
-			logger.error("Error while inserting Task JSON DATA - {}", e.getMessage());
-		}
     }
 
     private void removeTaskData(Connection connection, TaskModel task) {
@@ -645,165 +768,278 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
 
     private void addWorkflowToTaskMapping(Connection connection, TaskModel task) {
 
-        String EXISTS_WORKFLOW_TO_TASK = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM workflow_to_task WHERE workflow_id = ? AND task_id = ?)";
+        String EXISTS_WORKFLOW_TO_TASK =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM workflow_to_task WHERE workflow_id = ? AND task_id = ?)";
 
-        boolean exists = query(connection, EXISTS_WORKFLOW_TO_TASK,
-            q -> q.addParameter(task.getWorkflowInstanceId()).addParameter(task.getTaskId()).exists());
+        boolean exists =
+                query(
+                        connection,
+                        EXISTS_WORKFLOW_TO_TASK,
+                        q ->
+                                q.addParameter(task.getWorkflowInstanceId())
+                                        .addParameter(task.getTaskId())
+                                        .exists());
 
         if (!exists) {
-            String INSERT_WORKFLOW_TO_TASK = "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (workflow_to_task (workflow_id, task_id)) */ INTO workflow_to_task (workflow_id, task_id) VALUES (?, ?)";
+            String INSERT_WORKFLOW_TO_TASK =
+                    "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (workflow_to_task (workflow_id, task_id)) */ INTO workflow_to_task (workflow_id, task_id) VALUES (?, ?)";
 
-            execute(connection, INSERT_WORKFLOW_TO_TASK,
-                q -> q.addParameter(task.getWorkflowInstanceId()).addParameter(task.getTaskId()).executeUpdate());
+            execute(
+                    connection,
+                    INSERT_WORKFLOW_TO_TASK,
+                    q ->
+                            q.addParameter(task.getWorkflowInstanceId())
+                                    .addParameter(task.getTaskId())
+                                    .executeUpdate());
         }
     }
 
     private void removeWorkflowToTaskMapping(Connection connection, TaskModel task) {
-        String REMOVE_WORKFLOW_TO_TASK = "DELETE FROM workflow_to_task WHERE workflow_id = ? AND task_id = ?";
+        String REMOVE_WORKFLOW_TO_TASK =
+                "DELETE FROM workflow_to_task WHERE workflow_id = ? AND task_id = ?";
 
-        execute(connection, REMOVE_WORKFLOW_TO_TASK,
-            q -> q.addParameter(task.getWorkflowInstanceId()).addParameter(task.getTaskId()).executeDelete());
+        execute(
+                connection,
+                REMOVE_WORKFLOW_TO_TASK,
+                q ->
+                        q.addParameter(task.getWorkflowInstanceId())
+                                .addParameter(task.getTaskId())
+                                .executeDelete());
     }
 
     private void addWorkflowDefToWorkflowMapping(Connection connection, WorkflowModel workflow) {
-        String INSERT_WORKFLOW_DEF_TO_WORKFLOW = "INSERT INTO workflow_def_to_workflow (workflow_def, date_str, workflow_id) VALUES (?, ?, ?)";
+        String INSERT_WORKFLOW_DEF_TO_WORKFLOW =
+                "INSERT INTO workflow_def_to_workflow (workflow_def, date_str, workflow_id) VALUES (?, ?, ?)";
 
-        execute(connection, INSERT_WORKFLOW_DEF_TO_WORKFLOW,
-            q -> q.addParameter(workflow.getWorkflowName()).addParameter(dateStr(workflow.getCreateTime()))
-                .addParameter(workflow.getWorkflowId()).executeUpdate());
+        execute(
+                connection,
+                INSERT_WORKFLOW_DEF_TO_WORKFLOW,
+                q ->
+                        q.addParameter(workflow.getWorkflowName())
+                                .addParameter(dateStr(workflow.getCreateTime()))
+                                .addParameter(workflow.getWorkflowId())
+                                .executeUpdate());
     }
 
     private void removeWorkflowDefToWorkflowMapping(Connection connection, WorkflowModel workflow) {
-        String REMOVE_WORKFLOW_DEF_TO_WORKFLOW = "DELETE FROM workflow_def_to_workflow WHERE workflow_def = ? AND date_str = ? AND workflow_id = ?";
+        String REMOVE_WORKFLOW_DEF_TO_WORKFLOW =
+                "DELETE FROM workflow_def_to_workflow WHERE workflow_def = ? AND date_str = ? AND workflow_id = ?";
 
-        execute(connection, REMOVE_WORKFLOW_DEF_TO_WORKFLOW,
-            q -> q.addParameter(workflow.getWorkflowName()).addParameter(dateStr(workflow.getCreateTime()))
-                .addParameter(workflow.getWorkflowId()).executeUpdate());
+        execute(
+                connection,
+                REMOVE_WORKFLOW_DEF_TO_WORKFLOW,
+                q ->
+                        q.addParameter(workflow.getWorkflowName())
+                                .addParameter(dateStr(workflow.getCreateTime()))
+                                .addParameter(workflow.getWorkflowId())
+                                .executeUpdate());
     }
 
     @VisibleForTesting
     boolean addScheduledTask(Connection connection, TaskModel task, String taskKey) {
 
-        final String EXISTS_SCHEDULED_TASK = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM task_scheduled where workflow_id = ? AND task_key = ?)";
+        final String EXISTS_SCHEDULED_TASK =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM task_scheduled where workflow_id = ? AND task_key = ?)";
 
-        boolean exists = query(connection, EXISTS_SCHEDULED_TASK, q -> q.addParameter(task.getWorkflowInstanceId())
-            .addParameter(taskKey).exists());
+        boolean exists =
+                query(
+                        connection,
+                        EXISTS_SCHEDULED_TASK,
+                        q ->
+                                q.addParameter(task.getWorkflowInstanceId())
+                                        .addParameter(taskKey)
+                                        .exists());
 
         if (!exists) {
-            final String INSERT_IGNORE_SCHEDULED_TASK = "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (task_scheduled (workflow_id, task_key)) */ INTO task_scheduled (workflow_id, task_key, task_id) VALUES (?, ?, ?)";
+            final String INSERT_IGNORE_SCHEDULED_TASK =
+                    "INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX (task_scheduled (workflow_id, task_key)) */ INTO task_scheduled (workflow_id, task_key, task_id) VALUES (?, ?, ?)";
 
-            int count = query(connection, INSERT_IGNORE_SCHEDULED_TASK,
-                q -> q.addParameter(task.getWorkflowInstanceId())
-                    .addParameter(taskKey).addParameter(task.getTaskId()).executeUpdate());
+            int count =
+                    query(
+                            connection,
+                            INSERT_IGNORE_SCHEDULED_TASK,
+                            q ->
+                                    q.addParameter(task.getWorkflowInstanceId())
+                                            .addParameter(taskKey)
+                                            .addParameter(task.getTaskId())
+                                            .executeUpdate());
             return count > 0;
         } else {
             return false;
         }
-
     }
 
     private void removeScheduledTask(Connection connection, TaskModel task, String taskKey) {
-        String REMOVE_SCHEDULED_TASK = "DELETE FROM task_scheduled WHERE workflow_id = ? AND task_key = ?";
-        execute(connection, REMOVE_SCHEDULED_TASK,
-            q -> q.addParameter(task.getWorkflowInstanceId()).addParameter(taskKey).executeDelete());
+        String REMOVE_SCHEDULED_TASK =
+                "DELETE FROM task_scheduled WHERE workflow_id = ? AND task_key = ?";
+        execute(
+                connection,
+                REMOVE_SCHEDULED_TASK,
+                q ->
+                        q.addParameter(task.getWorkflowInstanceId())
+                                .addParameter(taskKey)
+                                .executeDelete());
     }
 
     private void addTaskInProgress(Connection connection, TaskModel task) {
-        String EXISTS_IN_PROGRESS_TASK = "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM task_in_progress WHERE task_def_name = ? AND task_id = ?)";
+        String EXISTS_IN_PROGRESS_TASK =
+                "SELECT 1 FROM DUAL WHERE EXISTS(SELECT 1 FROM task_in_progress WHERE task_def_name = ? AND task_id = ?)";
 
-        boolean exists = query(connection, EXISTS_IN_PROGRESS_TASK,
-            q -> q.addParameter(task.getTaskDefName()).addParameter(task.getTaskId()).exists());
+        boolean exists =
+                query(
+                        connection,
+                        EXISTS_IN_PROGRESS_TASK,
+                        q ->
+                                q.addParameter(task.getTaskDefName())
+                                        .addParameter(task.getTaskId())
+                                        .exists());
 
         if (!exists) {
-            String INSERT_IN_PROGRESS_TASK = "INSERT INTO task_in_progress (task_def_name, task_id, workflow_id) VALUES (?, ?, ?)";
+            String INSERT_IN_PROGRESS_TASK =
+                    "INSERT INTO task_in_progress (task_def_name, task_id, workflow_id) VALUES (?, ?, ?)";
 
-            execute(connection, INSERT_IN_PROGRESS_TASK, q -> q.addParameter(task.getTaskDefName())
-                .addParameter(task.getTaskId()).addParameter(task.getWorkflowInstanceId()).executeUpdate());
+            execute(
+                    connection,
+                    INSERT_IN_PROGRESS_TASK,
+                    q ->
+                            q.addParameter(task.getTaskDefName())
+                                    .addParameter(task.getTaskId())
+                                    .addParameter(task.getWorkflowInstanceId())
+                                    .executeUpdate());
         }
     }
 
     private void removeTaskInProgress(Connection connection, TaskModel task) {
-        String REMOVE_IN_PROGRESS_TASK = "DELETE FROM task_in_progress WHERE task_def_name = ? AND task_id = ?";
+        String REMOVE_IN_PROGRESS_TASK =
+                "DELETE FROM task_in_progress WHERE task_def_name = ? AND task_id = ?";
 
-        execute(connection, REMOVE_IN_PROGRESS_TASK,
-            q -> q.addParameter(task.getTaskDefName()).addParameter(task.getTaskId()).executeUpdate());
+        execute(
+                connection,
+                REMOVE_IN_PROGRESS_TASK,
+                q ->
+                        q.addParameter(task.getTaskDefName())
+                                .addParameter(task.getTaskId())
+                                .executeUpdate());
     }
 
     private void updateInProgressStatus(Connection connection, TaskModel task, String inProgress) {
         String UPDATE_IN_PROGRESS_TASK_STATUS =
-            "UPDATE task_in_progress SET in_progress_status = ?, modified_on = CURRENT_TIMESTAMP "
-                + "WHERE task_def_name = ? AND task_id = ?";
+                "UPDATE task_in_progress SET in_progress_status = ?, modified_on = CURRENT_TIMESTAMP "
+                        + "WHERE task_def_name = ? AND task_id = ?";
 
-        execute(connection, UPDATE_IN_PROGRESS_TASK_STATUS, q -> q.addParameter(inProgress)
-            .addParameter(task.getTaskDefName()).addParameter(task.getTaskId()).executeUpdate());
+        execute(
+                connection,
+                UPDATE_IN_PROGRESS_TASK_STATUS,
+                q ->
+                        q.addParameter(inProgress)
+                                .addParameter(task.getTaskDefName())
+                                .addParameter(task.getTaskId())
+                                .executeUpdate());
     }
 
     private boolean insertEventExecution(Connection connection, EventExecution eventExecution) {
 
-    	try {
-    		ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    		String json = ow.writeValueAsString(eventExecution);
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(eventExecution);
 
             String INSERT_EVENT_EXECUTION =
                     "INSERT INTO event_execution (event_handler_name, event_name, message_id, execution_id, json_data) "
-                        + "VALUES (?, ?, ?, ?, ?)";
-                int count = query(connection, INSERT_EVENT_EXECUTION,
-                    q -> q.addParameter(eventExecution.getName()).addParameter(eventExecution.getEvent())
-                        .addParameter(eventExecution.getMessageId()).addParameter(eventExecution.getId())
-                        .addParameter(json).executeUpdate());
-                
-                return count > 0;
+                            + "VALUES (?, ?, ?, ?, ?)";
+            int count =
+                    query(
+                            connection,
+                            INSERT_EVENT_EXECUTION,
+                            q ->
+                                    q.addParameter(eventExecution.getName())
+                                            .addParameter(eventExecution.getEvent())
+                                            .addParameter(eventExecution.getMessageId())
+                                            .addParameter(eventExecution.getId())
+                                            .addParameter(json)
+                                            .executeUpdate());
+
+            return count > 0;
+        } catch (IOException e) {
+            logger.error("Error while inserting Event Execution JSON DATA - {}", e.getMessage());
+            return false;
         }
-        catch (IOException e) {
-			logger.error("Error while inserting Event Execution JSON DATA - {}", e.getMessage());
-			return false;
-		}
-        
     }
 
     private void updateEventExecution(Connection connection, EventExecution eventExecution) {
-    	
-    	try {
-    		ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    		String json = ow.writeValueAsString(eventExecution);
-            
+
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(eventExecution);
+
             // @formatter:off
-            String UPDATE_EVENT_EXECUTION = "UPDATE event_execution SET " + "json_data = ?, "
-                + "modified_on = CURRENT_TIMESTAMP " + "WHERE event_handler_name = ? " + "AND event_name = ? "
-                + "AND message_id = ? " + "AND execution_id = ?";
+            String UPDATE_EVENT_EXECUTION =
+                    "UPDATE event_execution SET "
+                            + "json_data = ?, "
+                            + "modified_on = CURRENT_TIMESTAMP "
+                            + "WHERE event_handler_name = ? "
+                            + "AND event_name = ? "
+                            + "AND message_id = ? "
+                            + "AND execution_id = ?";
             // @formatter:on
 
-            execute(connection, UPDATE_EVENT_EXECUTION,
-                q -> q.addParameter(json).addParameter(eventExecution.getName())
-                    .addParameter(eventExecution.getEvent()).addParameter(eventExecution.getMessageId())
-                    .addParameter(eventExecution.getId()).executeUpdate());
-            
-            
+            execute(
+                    connection,
+                    UPDATE_EVENT_EXECUTION,
+                    q ->
+                            q.addParameter(json)
+                                    .addParameter(eventExecution.getName())
+                                    .addParameter(eventExecution.getEvent())
+                                    .addParameter(eventExecution.getMessageId())
+                                    .addParameter(eventExecution.getId())
+                                    .executeUpdate());
+
+        } catch (IOException e) {
+            logger.error("Error while updating Event Execution JSON DATA - {}", e.getMessage());
         }
-        catch (IOException e) {
-			logger.error("Error while updating Event Execution JSON DATA - {}", e.getMessage());
-		}
-       
     }
 
     private void removeEventExecution(Connection connection, EventExecution eventExecution) {
-        String REMOVE_EVENT_EXECUTION = "DELETE FROM event_execution " + "WHERE event_handler_name = ? "
-            + "AND event_name = ? " + "AND message_id = ? " + "AND execution_id = ?";
+        String REMOVE_EVENT_EXECUTION =
+                "DELETE FROM event_execution "
+                        + "WHERE event_handler_name = ? "
+                        + "AND event_name = ? "
+                        + "AND message_id = ? "
+                        + "AND execution_id = ?";
 
-        execute(connection, REMOVE_EVENT_EXECUTION,
-            q -> q.addParameter(eventExecution.getName()).addParameter(eventExecution.getEvent())
-                .addParameter(eventExecution.getMessageId()).addParameter(eventExecution.getId())
-                .executeUpdate());
+        execute(
+                connection,
+                REMOVE_EVENT_EXECUTION,
+                q ->
+                        q.addParameter(eventExecution.getName())
+                                .addParameter(eventExecution.getEvent())
+                                .addParameter(eventExecution.getMessageId())
+                                .addParameter(eventExecution.getId())
+                                .executeUpdate());
     }
 
-    private EventExecution readEventExecution(Connection connection, String eventHandlerName, String eventName,
-        String messageId, String executionId) {
+    private EventExecution readEventExecution(
+            Connection connection,
+            String eventHandlerName,
+            String eventName,
+            String messageId,
+            String executionId) {
         // @formatter:off
-        String GET_EVENT_EXECUTION = "SELECT json_data FROM event_execution " + "WHERE event_handler_name = ? "
-            + "AND event_name = ? " + "AND message_id = ? " + "AND execution_id = ?";
+        String GET_EVENT_EXECUTION =
+                "SELECT json_data FROM event_execution "
+                        + "WHERE event_handler_name = ? "
+                        + "AND event_name = ? "
+                        + "AND message_id = ? "
+                        + "AND execution_id = ?";
         // @formatter:on
-        return query(connection, GET_EVENT_EXECUTION, q -> q.addParameter(eventHandlerName).addParameter(eventName)
-            .addParameter(messageId).addParameter(executionId).executeAndFetchFirst(EventExecution.class));
+        return query(
+                connection,
+                GET_EVENT_EXECUTION,
+                q ->
+                        q.addParameter(eventHandlerName)
+                                .addParameter(eventName)
+                                .addParameter(messageId)
+                                .addParameter(executionId)
+                                .executeAndFetchFirst(EventExecution.class));
     }
 
     private void insertOrUpdatePollData(Connection connection, PollData pollData, String domain) {
@@ -813,64 +1049,88 @@ public class OracleExecutionDAO extends OracleBaseDAO implements ExecutionDAO, R
          * is that if we try the INSERT first, the sequence will be increased even if the ON DUPLICATE KEY happens. Since polling happens *a lot*, the sequence can increase
          * dramatically even though it won't be used.
          */
-    	
-    	try {
-    		ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-    		String json = ow.writeValueAsString(pollData);
 
-    		String UPDATE_POLL_DATA = "UPDATE poll_data SET json_data=?, modified_on=CURRENT_TIMESTAMP WHERE queue_name=? AND domain=?";
-            int rowsUpdated = query(connection, UPDATE_POLL_DATA,
-                q -> q.addParameter(json).addParameter(pollData.getQueueName()).addParameter(domain)
-                    .executeUpdate());
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(pollData);
+
+            String UPDATE_POLL_DATA =
+                    "UPDATE poll_data SET json_data=?, modified_on=CURRENT_TIMESTAMP WHERE queue_name=? AND domain=?";
+            int rowsUpdated =
+                    query(
+                            connection,
+                            UPDATE_POLL_DATA,
+                            q ->
+                                    q.addParameter(json)
+                                            .addParameter(pollData.getQueueName())
+                                            .addParameter(domain)
+                                            .executeUpdate());
 
             if (rowsUpdated == 0) {
-                String INSERT_POLL_DATA = "INSERT INTO poll_data(queue_name, domain, json_data, modified_on) VALUES (?, ?, ?, CURRENT_TIMESTAMP)";
-                execute(connection, INSERT_POLL_DATA, q -> q.addParameter(pollData.getQueueName()).addParameter(domain)
-                    .addParameter(json).executeUpdate());
+                String INSERT_POLL_DATA =
+                        "INSERT INTO poll_data(queue_name, domain, json_data, modified_on) VALUES (?, ?, ?, CURRENT_TIMESTAMP)";
+                execute(
+                        connection,
+                        INSERT_POLL_DATA,
+                        q ->
+                                q.addParameter(pollData.getQueueName())
+                                        .addParameter(domain)
+                                        .addParameter(json)
+                                        .executeUpdate());
             }
-            
+
+        } catch (IOException e) {
+            logger.error("Error while updating Event Execution JSON DATA - {}", e.getMessage());
         }
-        catch (IOException e) {
-			logger.error("Error while updating Event Execution JSON DATA - {}", e.getMessage());
-		}
-    	
-        
     }
 
     private PollData readPollData(Connection connection, String queueName, String domain) {
-        String GET_POLL_DATA = "SELECT json_data FROM poll_data WHERE queue_name = ? AND domain = ?";
-        return query(connection, GET_POLL_DATA,
-            q -> q.addParameter(queueName).addParameter(domain).executeAndFetchFirst(PollData.class));
+        String GET_POLL_DATA =
+                "SELECT json_data FROM poll_data WHERE queue_name = ? AND domain = ?";
+        return query(
+                connection,
+                GET_POLL_DATA,
+                q ->
+                        q.addParameter(queueName)
+                                .addParameter(domain)
+                                .executeAndFetchFirst(PollData.class));
     }
 
     private List<PollData> readAllPollData(String queueName) {
         String GET_ALL_POLL_DATA = "SELECT json_data FROM poll_data WHERE queue_name = ?";
-        return queryWithTransaction(GET_ALL_POLL_DATA, q -> q.addParameter(queueName).executeAndFetch(PollData.class));
+        return queryWithTransaction(
+                GET_ALL_POLL_DATA, q -> q.addParameter(queueName).executeAndFetch(PollData.class));
     }
 
     private List<String> findAllTasksInProgressInOrderOfArrival(TaskModel task, int limit) {
-        String GET_IN_PROGRESS_TASKS_WITH_LIMIT = "SELECT task_id FROM task_in_progress WHERE task_def_name = ? AND ROWNUM <= ? ORDER BY created_on";
+        String GET_IN_PROGRESS_TASKS_WITH_LIMIT =
+                "SELECT task_id FROM task_in_progress WHERE task_def_name = ? AND ROWNUM <= ? ORDER BY created_on";
 
-        return queryWithTransaction(GET_IN_PROGRESS_TASKS_WITH_LIMIT,
-            q -> q.addParameter(task.getTaskDefName()).addParameter(limit).executeScalarList(String.class));
+        return queryWithTransaction(
+                GET_IN_PROGRESS_TASKS_WITH_LIMIT,
+                q ->
+                        q.addParameter(task.getTaskDefName())
+                                .addParameter(limit)
+                                .executeScalarList(String.class));
     }
 
     private void validate(TaskModel task) {
         Preconditions.checkNotNull(task, "task object cannot be null");
         Preconditions.checkNotNull(task.getTaskId(), "Task id cannot be null");
-        Preconditions.checkNotNull(task.getWorkflowInstanceId(), "Workflow instance id cannot be null");
-        Preconditions.checkNotNull(task.getReferenceTaskName(), "Task reference name cannot be null");
+        Preconditions.checkNotNull(
+                task.getWorkflowInstanceId(), "Workflow instance id cannot be null");
+        Preconditions.checkNotNull(
+                task.getReferenceTaskName(), "Task reference name cannot be null");
     }
 
-	@Override
-	public boolean exceedsLimit(TaskModel task) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	
-	@Override
-	public String createWorkflow(WorkflowModel workflow) {
+    @Override
+    public boolean exceedsLimit(TaskModel task) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public String createWorkflow(WorkflowModel workflow) {
         return insertOrUpdateWorkflow(workflow, false);
     }
-
 }

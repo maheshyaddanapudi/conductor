@@ -19,7 +19,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("conductor.oracle")
 public class OracleProperties {
 
-	private Duration taskDefCacheRefreshInterval = Duration.ofSeconds(60);
+    private Duration taskDefCacheRefreshInterval = Duration.ofSeconds(60);
 
     private Integer deadlockRetryMax = 3;
 
@@ -38,5 +38,4 @@ public class OracleProperties {
     public void setDeadlockRetryMax(Integer deadlockRetryMax) {
         this.deadlockRetryMax = deadlockRetryMax;
     }
-
 }

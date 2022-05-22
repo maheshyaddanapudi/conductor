@@ -1,22 +1,16 @@
 /*
- *  Copyright 2021 Netflix, Inc.
- *  <p>
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- *  the License. You may obtain a copy of the License at
- *  <p>
- *  http://www.apache.org/licenses/LICENSE-2.0
- *  <p>
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- *  an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- *  specific language governing permissions and limitations under the License.
+ * Copyright 2021 Netflix, Inc.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package com.netflix.conductor.oracle.dao;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -38,15 +32,23 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
 import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.oracle.config.OracleTestConfiguration;
 import com.netflix.conductor.oracle.util.Query;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.zaxxer.hikari.HikariDataSource;
 
-@ContextConfiguration(classes = {TestObjectMapperConfiguration.class, OracleTestConfiguration.class})
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+@ContextConfiguration(
+        classes = {TestObjectMapperConfiguration.class, OracleTestConfiguration.class})
 @RunWith(SpringRunner.class)
 public class OracleQueueDAOTest {
 
@@ -54,25 +56,19 @@ public class OracleQueueDAOTest {
 
     private OracleQueueDAO queueDAO;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Autowired private ObjectMapper objectMapper;
 
-    @Rule
-    public TestName name = new TestName();
+    @Rule public TestName name = new TestName();
 
-    @Rule
-    public ExpectedException expected = ExpectedException.none();
+    @Rule public ExpectedException expected = ExpectedException.none();
 
-    @Autowired
-    public HikariDataSource dataSource;
-    
-    @Autowired
-    public RetryTemplate retryTemplate;
+    @Autowired public HikariDataSource dataSource;
 
+    @Autowired public RetryTemplate retryTemplate;
 
     @Before
     public void setup() {
-    	queueDAO = new OracleQueueDAO(objectMapper, dataSource,retryTemplate);
+        queueDAO = new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
     }
 
     @Test
@@ -144,9 +140,7 @@ public class OracleQueueDAOTest {
         assertEquals(0, size);
     }
 
-    /**
-     * Test fix for https://github.com/Netflix/conductor/issues/1892
-     */
+    /** Test fix for https://github.com/Netflix/conductor/issues/1892 */
     @Test
     public void containsMessageTest() {
         String queueName = "TestQueue";
@@ -210,12 +204,16 @@ public class OracleQueueDAOTest {
         assertEquals("Second poll size mismatch", secondPollSize, secondPoll.size());
 
         // Assert that the total queue size hasn't changed
-        assertEquals("Total queue size should have remained the same", totalSize, queueDAO.getSize(queueName));
+        assertEquals(
+                "Total queue size should have remained the same",
+                totalSize,
+                queueDAO.getSize(queueName));
 
         // Assert that our un-popped messages match our expected size
         final long expectedSize = totalSize - firstPollSize - secondPollSize;
         try (Connection c = dataSource.getConnection()) {
-            String UNPOPPED = "SELECT COUNT(*) FROM queue_message WHERE queue_name = ? AND popped = 'N'";
+            String UNPOPPED =
+                    "SELECT COUNT(*) FROM queue_message WHERE queue_name = ? AND popped = 'N'";
             try (Query q = new Query(objectMapper, c, UNPOPPED)) {
                 long count = q.addParameter(queueName).executeCount();
                 assertEquals("Remaining queue size mismatch", expectedSize, count);
@@ -245,7 +243,8 @@ public class OracleQueueDAOTest {
                 // Set id:6 and id:7 for a 2s delay to be picked up in the second polling batch
                 offset = 5;
             } else {
-                // Set all other queue messages to have enough of a delay that they won't accidentally
+                // Set all other queue messages to have enough of a delay that they won't
+                // accidentally
                 // be picked up.
                 offset = 10_000 + i;
             }
@@ -265,8 +264,11 @@ public class OracleQueueDAOTest {
         assertFalse("First poll was empty", firstPoll.isEmpty());
         assertEquals("First poll size mismatch", firstPollSize, firstPoll.size());
 
-        List<String> firstPollMessageIds = messages.stream().map(Message::getId).collect(Collectors.toList())
-            .subList(0, firstPollSize + 1);
+        List<String> firstPollMessageIds =
+                messages.stream()
+                        .map(Message::getId)
+                        .collect(Collectors.toList())
+                        .subList(0, firstPollSize + 1);
 
         for (int i = 0; i < firstPollSize; i++) {
             String actual = firstPoll.get(i).getId();
@@ -292,12 +294,16 @@ public class OracleQueueDAOTest {
         }
 
         // Assert that the total queue size hasn't changed
-        assertEquals("Total queue size should have remained the same", totalSize, queueDAO.getSize(queueName));
+        assertEquals(
+                "Total queue size should have remained the same",
+                totalSize,
+                queueDAO.getSize(queueName));
 
         // Assert that our un-popped messages match our expected size
         final long expectedSize = totalSize - firstPollSize - secondPollSize;
         try (Connection c = dataSource.getConnection()) {
-            String UNPOPPED = "SELECT COUNT(*) FROM queue_message WHERE queue_name = ? AND popped = 'N'";
+            String UNPOPPED =
+                    "SELECT COUNT(*) FROM queue_message WHERE queue_name = ? AND popped = 'N'";
             try (Query q = new Query(objectMapper, c, UNPOPPED)) {
                 long count = q.addParameter(queueName).executeCount();
                 assertEquals("Remaining queue size mismatch", expectedSize, count);
@@ -356,11 +362,15 @@ public class OracleQueueDAOTest {
         Map<String, Map<String, Map<String, Long>>> details = queueDAO.queuesDetailVerbose();
         uacked = details.get(queueName).get("a").get("uacked");
         assertNotNull(uacked);
-        assertEquals("The messages that were polled should be unacked still", uacked.longValue(), unackedCount - 1);
+        assertEquals(
+                "The messages that were polled should be unacked still",
+                uacked.longValue(),
+                unackedCount - 1);
 
         Long otherUacked = details.get(otherQueueName).get("a").get("uacked");
         assertNotNull(otherUacked);
-        assertEquals("Other queue should have all unacked messages", otherUacked.longValue(), count);
+        assertEquals(
+                "Other queue should have all unacked messages", otherUacked.longValue(), count);
 
         Long size = queueDAO.queuesDetail().get(queueName);
         assertNotNull(size);
