@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import javax.sql.DataSource;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -29,14 +30,13 @@ import org.springframework.retry.backoff.NoBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.oracle.dao.OracleExecutionDAO;
 import com.netflix.conductor.oracle.dao.OracleMetadataDAO;
 import com.netflix.conductor.oracle.dao.OracleQueueDAO;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OracleProperties.class)
@@ -52,7 +52,7 @@ public class OracleConfiguration {
     public MetadataDAO oracleMetadataDAO(
             ObjectMapper objectMapper,
             DataSource dataSource,
-            RetryTemplate retryTemplate,
+            @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate,
             OracleProperties properties) {
         return new OracleMetadataDAO(objectMapper, dataSource, retryTemplate, properties);
     }
@@ -60,14 +60,14 @@ public class OracleConfiguration {
     @Bean
     @DependsOn({"flyway"})
     public ExecutionDAO oracleExecutionDAO(
-            ObjectMapper objectMapper, DataSource dataSource, RetryTemplate retryTemplate) {
+            ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
         return new OracleExecutionDAO(objectMapper, dataSource, retryTemplate);
     }
 
     @Bean
     @DependsOn({"flyway"})
     public QueueDAO oracleQueueDAO(
-            ObjectMapper objectMapper, DataSource dataSource, RetryTemplate retryTemplate) {
+            ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
         return new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
     }
 
