@@ -31,72 +31,69 @@ import com.netflix.conductor.oracle.dao.OracleQueueDAO;
 @ConditionalOnProperty(name = "conductor.db.type", havingValue = "oracle")
 @Import(DataSourceAutoConfiguration.class)
 public class OracleConfiguration {
-	
+
 	private static final String ER_LOCK_DEADLOCK = "ORA-00060";
-    private static final String ER_SERIALIZATION_FAILURE = "ORA-08177";
-	
-    @Bean
-    @DependsOn({"flyway"})
-    public MetadataDAO oracleMetadataDAO(ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate, OracleProperties properties) {
+	private static final String ER_SERIALIZATION_FAILURE = "ORA-08177";
+
+	@Bean
+	@DependsOn({ "flyway" })
+	public MetadataDAO oracleMetadataDAO(ObjectMapper objectMapper, DataSource dataSource,
+			@Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate, OracleProperties properties) {
 		return new OracleMetadataDAO(objectMapper, dataSource, retryTemplate, properties);
-    }
+	}
 
-    @Bean
-    @DependsOn({"flyway"})
-    public ExecutionDAO oracleExecutionDAO(ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
-        return new OracleExecutionDAO(objectMapper, dataSource, retryTemplate);
-    }
+	@Bean
+	@DependsOn({ "flyway" })
+	public ExecutionDAO oracleExecutionDAO(ObjectMapper objectMapper, DataSource dataSource,
+			@Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
+		return new OracleExecutionDAO(objectMapper, dataSource, retryTemplate);
+	}
 
-    @Bean
-    @DependsOn({"flyway"})
-    public QueueDAO oracleQueueDAO(ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
-        return new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
-    }
-    
-    @Bean
-    public RetryTemplate oracleRetryTemplate(OracleProperties properties) {
-        SimpleRetryPolicy retryPolicy = new CustomRetryPolicy();
-        retryPolicy.setMaxAttempts(properties.getDeadlockRetryMax());
+	@Bean
+	@DependsOn({ "flyway" })
+	public QueueDAO oracleQueueDAO(ObjectMapper objectMapper, DataSource dataSource,
+			@Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
+		return new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
+	}
 
-        RetryTemplate retryTemplate = new RetryTemplate();
-        retryTemplate.setRetryPolicy(retryPolicy);
-        retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
-        return retryTemplate;
-    }
-    
-    public static class CustomRetryPolicy extends SimpleRetryPolicy {
+	@Bean
+	public RetryTemplate oracleRetryTemplate(OracleProperties properties) {
+		SimpleRetryPolicy retryPolicy = new CustomRetryPolicy();
+		retryPolicy.setMaxAttempts(properties.getDeadlockRetryMax());
 
-        /**
-		 * 
-		 */
+		RetryTemplate retryTemplate = new RetryTemplate();
+		retryTemplate.setRetryPolicy(retryPolicy);
+		retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
+		return retryTemplate;
+	}
+
+	public static class CustomRetryPolicy extends SimpleRetryPolicy {
+
 		private static final long serialVersionUID = -7360486585454857047L;
 
 		@Override
-        public boolean canRetry(final RetryContext context) {
-            final Optional<Throwable> lastThrowable =
-                    Optional.ofNullable(context.getLastThrowable());
-            return lastThrowable
-                    .map(throwable -> super.canRetry(context) && isDeadLockError(throwable))
-                    .orElseGet(() -> super.canRetry(context));
-        }
+		public boolean canRetry(final RetryContext context) {
+			final Optional<Throwable> lastThrowable = Optional.ofNullable(context.getLastThrowable());
+			return lastThrowable.map(throwable -> super.canRetry(context) && isDeadLockError(throwable))
+					.orElseGet(() -> super.canRetry(context));
+		}
 
-        private boolean isDeadLockError(Throwable throwable) {
-            SQLException sqlException = findCauseSQLException(throwable);
-            if (sqlException == null) {
-                return false;
-            }
-            return ER_LOCK_DEADLOCK.equals(sqlException.getSQLState())
-            		|| sqlException.getErrorCode() == 60
-                    || ER_SERIALIZATION_FAILURE.equals(sqlException.getSQLState())
-            		|| sqlException.getErrorCode() == 8177;
-        }
+		private boolean isDeadLockError(Throwable throwable) {
+			SQLException sqlException = findCauseSQLException(throwable);
+			if (sqlException == null) {
+				return false;
+			}
+			return ER_LOCK_DEADLOCK.equals(sqlException.getSQLState()) || sqlException.getErrorCode() == 60
+					|| ER_SERIALIZATION_FAILURE.equals(sqlException.getSQLState())
+					|| sqlException.getErrorCode() == 8177;
+		}
 
-        private SQLException findCauseSQLException(Throwable throwable) {
-            Throwable causeException = throwable;
-            while (null != causeException && !(causeException instanceof SQLException)) {
-                causeException = causeException.getCause();
-            }
-            return (SQLException) causeException;
-        }
-    }
+		private SQLException findCauseSQLException(Throwable throwable) {
+			Throwable causeException = throwable;
+			while (null != causeException && !(causeException instanceof SQLException)) {
+				causeException = causeException.getCause();
+			}
+			return (SQLException) causeException;
+		}
+	}
 }
