@@ -70,48 +70,4 @@ public class OracleConfiguration {
             ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
         return new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
     }
-
-    @Bean
-    public RetryTemplate oracleRetryTemplate(OracleProperties properties) {
-        SimpleRetryPolicy retryPolicy = new CustomRetryPolicy();
-        retryPolicy.setMaxAttempts(properties.getDeadlockRetryMax());
-
-        RetryTemplate retryTemplate = new RetryTemplate();
-        retryTemplate.setRetryPolicy(retryPolicy);
-        retryTemplate.setBackOffPolicy(new NoBackOffPolicy());
-        return retryTemplate;
-    }
-
-    public static class CustomRetryPolicy extends SimpleRetryPolicy {
-
-        private static final long serialVersionUID = -7360486585454857047L;
-
-        @Override
-        public boolean canRetry(final RetryContext context) {
-            final Optional<Throwable> lastThrowable =
-                    Optional.ofNullable(context.getLastThrowable());
-            return lastThrowable
-                    .map(throwable -> super.canRetry(context) && isDeadLockError(throwable))
-                    .orElseGet(() -> super.canRetry(context));
-        }
-
-        private boolean isDeadLockError(Throwable throwable) {
-            SQLException sqlException = findCauseSQLException(throwable);
-            if (sqlException == null) {
-                return false;
-            }
-            return ER_LOCK_DEADLOCK.equals(sqlException.getSQLState())
-                    || sqlException.getErrorCode() == 60
-                    || ER_SERIALIZATION_FAILURE.equals(sqlException.getSQLState())
-                    || sqlException.getErrorCode() == 8177;
-        }
-
-        private SQLException findCauseSQLException(Throwable throwable) {
-            Throwable causeException = throwable;
-            while (null != causeException && !(causeException instanceof SQLException)) {
-                causeException = causeException.getCause();
-            }
-            return (SQLException) causeException;
-        }
-    }
 }
