@@ -12,6 +12,11 @@
  */
 package com.netflix.conductor.oracle.dao;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,23 +30,18 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.common.config.TestObjectMapperConfiguration;
-import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.ExecutionDAOTest;
+import com.netflix.conductor.model.TaskModel;
+import com.netflix.conductor.model.WorkflowModel;
 import com.netflix.conductor.oracle.config.OracleTestConfiguration;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 @ContextConfiguration(
         classes = {TestObjectMapperConfiguration.class, OracleTestConfiguration.class})
@@ -76,9 +76,9 @@ public class OracleExecutionDAOTest extends ExecutionDAOTest {
         workflowTask.setTaskDefinition(taskDefinition);
         workflowTask.setTaskDefinition(taskDefinition);
 
-        List<Task> tasks = new LinkedList<>();
+        List<TaskModel> tasks = new LinkedList<>();
         for (int i = 0; i < 15; i++) {
-            Task task = new Task();
+        	TaskModel task = new TaskModel();
             task.setScheduledTime(1L);
             task.setSeq(i + 1);
             task.setTaskId("t_" + i);
@@ -86,16 +86,16 @@ public class OracleExecutionDAOTest extends ExecutionDAOTest {
             task.setReferenceTaskName("task__1");
             task.setTaskDefName("task__1");
             tasks.add(task);
-            task.setStatus(Task.Status.SCHEDULED);
+            task.setStatus(TaskModel.Status.SCHEDULED);
             task.setWorkflowTask(workflowTask);
         }
 
         getExecutionDAO().createTasks(tasks);
         assertFalse(getExecutionDAO().exceedsInProgressLimit(tasks.get(0)));
-        tasks.get(0).setStatus(Task.Status.IN_PROGRESS);
+        tasks.get(0).setStatus(TaskModel.Status.IN_PROGRESS);
         getExecutionDAO().updateTask(tasks.get(0));
 
-        for (Task task : tasks) {
+        for (TaskModel task : tasks) {
             assertTrue(getExecutionDAO().exceedsInProgressLimit(task));
         }
     }
@@ -106,12 +106,12 @@ public class OracleExecutionDAOTest extends ExecutionDAOTest {
         WorkflowDef def = new WorkflowDef();
         def.setName("pending_count_correlation_jtest");
 
-        Workflow workflow = createTestWorkflow();
+        WorkflowModel workflow = createTestWorkflow();
         workflow.setWorkflowDefinition(def);
 
         generateWorkflows(workflow, 10);
 
-        List<Workflow> bycorrelationId =
+        List<WorkflowModel> bycorrelationId =
                 getExecutionDAO()
                         .getWorkflowsByCorrelationId(
                                 "pending_count_correlation_jtest", "corr001", true);
