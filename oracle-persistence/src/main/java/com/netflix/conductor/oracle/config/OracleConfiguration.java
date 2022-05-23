@@ -19,18 +19,15 @@ import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
-import org.springframework.context.annotation.Import;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.backoff.NoBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.dao.QueueDAO;
@@ -38,12 +35,12 @@ import com.netflix.conductor.oracle.dao.OracleExecutionDAO;
 import com.netflix.conductor.oracle.dao.OracleMetadataDAO;
 import com.netflix.conductor.oracle.dao.OracleQueueDAO;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OracleProperties.class)
 @ConditionalOnProperty(name = "conductor.db.type", havingValue = "oracle")
-@Import(DataSourceAutoConfiguration.class)
 public class OracleConfiguration {
-
     private static final String ER_LOCK_DEADLOCK = "ORA-00060";
     private static final String ER_SERIALIZATION_FAILURE = "ORA-08177";
 
@@ -60,14 +57,18 @@ public class OracleConfiguration {
     @Bean
     @DependsOn({"flyway"})
     public ExecutionDAO oracleExecutionDAO(
-            ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
+            ObjectMapper objectMapper,
+            DataSource dataSource,
+            @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
         return new OracleExecutionDAO(objectMapper, dataSource, retryTemplate);
     }
 
     @Bean
     @DependsOn({"flyway"})
     public QueueDAO oracleQueueDAO(
-            ObjectMapper objectMapper, DataSource dataSource, @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
+            ObjectMapper objectMapper,
+            DataSource dataSource,
+            @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
         return new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
     }
 
