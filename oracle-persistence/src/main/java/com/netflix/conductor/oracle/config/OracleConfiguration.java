@@ -17,12 +17,17 @@ import java.util.Optional;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Import;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.backoff.NoBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
@@ -40,9 +45,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OracleProperties.class)
 @ConditionalOnProperty(name = "conductor.db.type", havingValue = "oracle")
+// Import the DataSourceAutoConfiguration when oracle database is selected.
+// By default the datasource configuration is excluded in the main module.
+@Import({DataSourceAutoConfiguration.class, FlywayAutoConfiguration.class})
 public class OracleConfiguration {
     private static final String ER_LOCK_DEADLOCK = "ORA-00060";
     private static final String ER_SERIALIZATION_FAILURE = "ORA-08177";
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Bean
     @DependsOn({"flyway"})
@@ -51,6 +60,7 @@ public class OracleConfiguration {
             DataSource dataSource,
             @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate,
             OracleProperties properties) {
+        logger.info("Initialized Oracle Configuration ...");
         return new OracleMetadataDAO(objectMapper, dataSource, retryTemplate, properties);
     }
 
@@ -60,6 +70,7 @@ public class OracleConfiguration {
             ObjectMapper objectMapper,
             DataSource dataSource,
             @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
+        logger.info("Initialized Oracle Configuration ...");
         return new OracleExecutionDAO(objectMapper, dataSource, retryTemplate);
     }
 
@@ -69,11 +80,14 @@ public class OracleConfiguration {
             ObjectMapper objectMapper,
             DataSource dataSource,
             @Qualifier("oracleRetryTemplate") RetryTemplate retryTemplate) {
+        logger.info("Initialized Oracle Configuration ...");
         return new OracleQueueDAO(objectMapper, dataSource, retryTemplate);
     }
 
     @Bean
     public RetryTemplate oracleRetryTemplate(OracleProperties properties) {
+
+        logger.info("Initialized Oracle Configuration ...");
         SimpleRetryPolicy retryPolicy = new CustomRetryPolicy();
         retryPolicy.setMaxAttempts(properties.getDeadlockRetryMax());
 

@@ -14,8 +14,8 @@
 dependencies {
     implementation project(':conductor-common')
     implementation project(':conductor-core')
-    compileOnly 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework.boot:spring-boot-starter'
 
     // SBMTODO: remove guava dep
     implementation "com.google.guava:guava:${revGuava}"
@@ -34,4 +34,9 @@ dependencies {
 
     testImplementation project(':conductor-core').sourceSets.test.output
     testImplementation project(':conductor-common').sourceSets.test.output
+}
+
+test {
+    //the SQL unit tests must run within the same JVM to share the same embedded DB
+    maxParallelForks = 1
 }
