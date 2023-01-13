@@ -23,7 +23,7 @@ import com.netflix.conductor.common.metadata.tasks.TaskDef
 import com.netflix.conductor.common.metadata.tasks.TaskResult
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef
 import com.netflix.conductor.core.WorkflowContext
-import com.netflix.conductor.core.exception.ApplicationException
+import com.netflix.conductor.core.exception.NotFoundException
 import com.netflix.conductor.core.execution.WorkflowExecutor
 import com.netflix.conductor.dao.QueueDAO
 import com.netflix.conductor.model.WorkflowModel
@@ -158,8 +158,8 @@ class WorkflowTestUtil {
 
         TaskDef eventTaskX = new TaskDef()
         eventTaskX.name = 'eventX'
-        eventTaskX.timeoutSeconds = 1
-        eventTaskX.responseTimeoutSeconds = 1
+        eventTaskX.timeoutSeconds = 10
+        eventTaskX.responseTimeoutSeconds = 10
         eventTaskX.ownerEmail = DEFAULT_EMAIL_ADDRESS
 
         metadataService.registerTaskDef(
@@ -204,12 +204,8 @@ class WorkflowTestUtil {
     Optional<TaskDef> getPersistedTaskDefinition(String taskDefName) {
         try {
             return Optional.of(metadataService.getTaskDef(taskDefName))
-        } catch (ApplicationException applicationException) {
-            if (applicationException.code == ApplicationException.Code.NOT_FOUND) {
-                return Optional.empty()
-            } else {
-                throw applicationException
-            }
+        } catch(NotFoundException nfe) {
+            return Optional.empty()
         }
     }
 
@@ -302,6 +298,23 @@ class WorkflowTestUtil {
         return new Tuple(polledIntegrationTask)
     }
 
+    Tuple pollAndUpdateTask(String taskName, String workerId, String outputPayloadPath, Map<String, Object> outputParams = null, int waitAtEndSeconds = 0) {
+        def polledIntegrationTask = workflowExecutionService.poll(taskName, workerId)
+        def taskResult = new TaskResult(polledIntegrationTask)
+        taskResult.status = TaskResult.Status.IN_PROGRESS
+        taskResult.callbackAfterSeconds = 1
+        if (outputPayloadPath) {
+            taskResult.outputData = null
+            taskResult.externalOutputPayloadStoragePath = outputPayloadPath
+        } else if (outputParams) {
+            outputParams.forEach { k, v ->
+                taskResult.outputData[k] = v
+            }
+        }
+        workflowExecutionService.updateTask(taskResult)
+        return waitAtEndSecondsAndReturn(waitAtEndSeconds, polledIntegrationTask)
+    }
+
     /**
      * A helper method intended to be used in the <tt>then:</tt> block of the spock test feature, ideally intended to be called after either:
      * pollAndCompleteTask function or pollAndFailTask function
@@ -325,5 +338,13 @@ class WorkflowTestUtil {
         assert completedTaskAndAck[0]: "The task polled cannot be null"
         def polledIntegrationTask = completedTaskAndAck[0] as Task
         assert polledIntegrationTask
+    }
+
+    static void verifyPayload(Map<String, Object> expected,  Map<String, Object> payload) {
+        expected.forEach {
+            k, v ->
+                assert payload.containsKey(k)
+                assert payload[k] == v
+        }
     }
 }

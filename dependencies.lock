@@ -1,7 +1,7 @@
 {
     "annotationProcessor": {
         "org.springframework.boot:spring-boot-configuration-processor": {
-            "locked": "2.6.7"
+            "locked": "2.7.3"
         }
     },
     "compileClasspath": {
@@ -23,12 +23,12 @@
     },
     "jacocoAgent": {
         "org.jacoco:org.jacoco.agent": {
-            "locked": "0.8.7"
+            "locked": "0.8.8"
         }
     },
     "jacocoAnt": {
         "org.jacoco:org.jacoco.ant": {
-            "locked": "0.8.7"
+            "locked": "0.8.8"
         }
     },
     "runtimeClasspath": {
@@ -67,11 +67,14 @@
         "org.apache.logging.log4j:log4j-web": {
             "locked": "2.17.1"
         },
+        "org.junit.vintage:junit-vintage-engine": {
+            "locked": "5.8.2"
+        },
         "org.springframework.boot:spring-boot-starter-log4j2": {
-            "locked": "2.6.7"
+            "locked": "2.7.3"
         },
         "org.springframework.boot:spring-boot-starter-test": {
-            "locked": "2.6.7"
+            "locked": "2.7.3"
         }
     },
     "testRuntimeClasspath": {
@@ -93,11 +96,14 @@
         "org.apache.logging.log4j:log4j-web": {
             "locked": "2.17.1"
         },
+        "org.junit.vintage:junit-vintage-engine": {
+            "locked": "5.8.2"
+        },
         "org.springframework.boot:spring-boot-starter-log4j2": {
-            "locked": "2.6.7"
+            "locked": "2.7.3"
         },
         "org.springframework.boot:spring-boot-starter-test": {
-            "locked": "2.6.7"
+            "locked": "2.7.3"
         }
     }
 }

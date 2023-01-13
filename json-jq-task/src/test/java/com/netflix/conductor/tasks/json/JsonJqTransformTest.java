@@ -12,8 +12,10 @@
  */
 package com.netflix.conductor.tasks.json;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
@@ -22,6 +24,7 @@ import com.netflix.conductor.common.config.ObjectMapperProvider;
 import com.netflix.conductor.model.TaskModel;
 import com.netflix.conductor.model.WorkflowModel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.junit.Assert.*;
@@ -46,7 +49,7 @@ public class JsonJqTransformTest {
         jsonJqTransform.start(workflow, task, null);
 
         assertNull(task.getOutputData().get("error"));
-        assertEquals("\"VALUE\"", task.getOutputData().get("result").toString());
+        assertEquals("VALUE", task.getOutputData().get("result").toString());
         assertEquals("[\"VALUE\"]", task.getOutputData().get("resultList").toString());
     }
 
@@ -91,5 +94,96 @@ public class JsonJqTransformTest {
         assertTrue(
                 ((String) task.getOutputData().get("error"))
                         .startsWith("Encountered \" \"[\" \"[ \"\" at line 1"));
+    }
+
+    @Test
+    public void mapResultShouldBeCorrectlyExtracted() {
+        final JsonJqTransform jsonJqTransform = new JsonJqTransform(objectMapper);
+        final WorkflowModel workflow = new WorkflowModel();
+        final TaskModel task = new TaskModel();
+        final Map<String, Object> taskInput = new HashMap<>();
+        Map<String, Object> inputData = new HashMap<>();
+        inputData.put("method", "POST");
+        inputData.put("successExpression", null);
+        inputData.put("requestTransform", "{name: (.body.name + \" you are a \" + .body.title) }");
+        inputData.put("responseTransform", "{result: \"reply: \" + .response.body.message}");
+        taskInput.put("input", inputData);
+        taskInput.put(
+                "queryExpression",
+                "{ requestTransform: .input.requestTransform // \".body\"  , responseTransform: .input.responseTransform // \".response.body\", method: .input.method // \"GET\", document: .input.document // \"rgt_results\", successExpression: .input.successExpression // \"true\"   }");
+        task.setInputData(taskInput);
+        task.setOutputData(new HashMap<>());
+
+        jsonJqTransform.start(workflow, task, null);
+
+        assertNull(task.getOutputData().get("error"));
+        assertTrue(task.getOutputData().get("result") instanceof Map);
+        HashMap<String, Object> result =
+                (HashMap<String, Object>) task.getOutputData().get("result");
+        assertEquals("POST", result.get("method"));
+        assertEquals(
+                "{name: (.body.name + \" you are a \" + .body.title) }",
+                result.get("requestTransform"));
+        assertEquals(
+                "{result: \"reply: \" + .response.body.message}", result.get("responseTransform"));
+    }
+
+    @Test
+    public void stringResultShouldBeCorrectlyExtracted() {
+        final JsonJqTransform jsonJqTransform = new JsonJqTransform(objectMapper);
+        final WorkflowModel workflow = new WorkflowModel();
+        final TaskModel task = new TaskModel();
+        final Map<String, Object> taskInput = new HashMap<>();
+        taskInput.put("data", new ArrayList<>());
+        taskInput.put(
+                "queryExpression", "if(.data | length >0) then \"EXISTS\" else \"CREATE\" end");
+
+        task.setInputData(taskInput);
+
+        jsonJqTransform.start(workflow, task, null);
+
+        assertNull(task.getOutputData().get("error"));
+        assertTrue(task.getOutputData().get("result") instanceof String);
+        String result = (String) task.getOutputData().get("result");
+        assertEquals("CREATE", result);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void listResultShouldBeCorrectlyExtracted() throws JsonProcessingException {
+        final JsonJqTransform jsonJqTransform = new JsonJqTransform(objectMapper);
+        final WorkflowModel workflow = new WorkflowModel();
+        final TaskModel task = new TaskModel();
+        String json =
+                "{ \"request\": { \"transitions\": [ { \"name\": \"redeliver\" }, { \"name\": \"redeliver_from_validation_error\" }, { \"name\": \"redelivery\" } ] } }";
+        Map<String, Object> inputData = objectMapper.readValue(json, Map.class);
+
+        final Map<String, Object> taskInput = new HashMap<>();
+        taskInput.put("inputData", inputData);
+        taskInput.put("queryExpression", ".inputData.request.transitions | map(.name)");
+
+        task.setInputData(taskInput);
+
+        jsonJqTransform.start(workflow, task, null);
+
+        assertNull(task.getOutputData().get("error"));
+        assertTrue(task.getOutputData().get("result") instanceof List);
+        List<Object> result = (List<Object>) task.getOutputData().get("result");
+        assertEquals(3, result.size());
+    }
+
+    @Test
+    public void nullResultShouldBeCorrectlyExtracted() throws JsonProcessingException {
+        final JsonJqTransform jsonJqTransform = new JsonJqTransform(objectMapper);
+        final WorkflowModel workflow = new WorkflowModel();
+        final TaskModel task = new TaskModel();
+        final Map<String, Object> taskInput = new HashMap<>();
+        taskInput.put("queryExpression", "null");
+        task.setInputData(taskInput);
+
+        jsonJqTransform.start(workflow, task, null);
+
+        assertNull(task.getOutputData().get("error"));
+        assertNull(task.getOutputData().get("result"));
     }
 }

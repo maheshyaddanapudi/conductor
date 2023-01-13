@@ -18,6 +18,7 @@ import com.netflix.conductor.common.metadata.tasks.Task
 import com.netflix.conductor.common.metadata.tasks.TaskDef
 import com.netflix.conductor.common.metadata.tasks.TaskType
 import com.netflix.conductor.common.run.Workflow
+import com.netflix.conductor.core.execution.tasks.Join
 import com.netflix.conductor.core.execution.tasks.SubWorkflow
 import com.netflix.conductor.test.base.AbstractSpecification
 import com.netflix.conductor.test.utils.MockExternalPayloadStorage
@@ -25,6 +26,7 @@ import com.netflix.conductor.test.utils.UserTask
 
 import spock.lang.Shared
 
+import static com.netflix.conductor.test.util.WorkflowTestUtil.verifyPayload
 import static com.netflix.conductor.test.util.WorkflowTestUtil.verifyPolledAndAcknowledgedLargePayloadTask
 import static com.netflix.conductor.test.util.WorkflowTestUtil.verifyPolledAndAcknowledgedTask
 
@@ -58,6 +60,9 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
     SubWorkflow subWorkflowTask
 
     @Autowired
+    Join joinTask
+
+    @Autowired
     MockExternalPayloadStorage mockExternalPayloadStorage
 
     def setup() {
@@ -81,7 +86,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         String workflowInputPath = uploadInitialWorkflowInput()
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(LINEAR_WORKFLOW_T1_T2, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(LINEAR_WORKFLOW_T1_T2, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -140,7 +145,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         String workflowInputPath = uploadInitialWorkflowInput()
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(WORKFLOW_WITH_SYNCHRONOUS_SYSTEM_TASK, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(WORKFLOW_WITH_SYNCHRONOUS_SYSTEM_TASK, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -182,7 +187,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         def correlationId = "conditional_system_external_storage"
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(CONDITIONAL_SYSTEM_TASK_WORKFLOW, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(CONDITIONAL_SYSTEM_TASK_WORKFLOW, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -278,7 +283,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         String workflowInputPath = uploadInitialWorkflowInput()
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(FORK_JOIN_WF, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(FORK_JOIN_WF, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -295,6 +300,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         }
 
         when: "the first task of the left fork is polled and completed"
+        def joinTaskId = workflowExecutionService.getExecutionStatus(workflowInstanceId, true).getTaskByRefName("fanouttask_join").taskId
         def polledAndAckTask = workflowTestUtil.pollAndCompleteTask('integration_task_1', 'task1.integration.worker')
 
         then: "verify that the 'integration_task_1' was polled and acknowledged"
@@ -342,10 +348,16 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         when: "the second task of the left fork is polled and completed with external payload storage"
         polledAndAckLargePayloadTask = workflowTestUtil.pollAndCompleteLargePayloadTask('integration_task_3', 'task3.integration.worker', taskOutputPath)
 
+        and: "the workflow is evaluated"
+        sweep(workflowInstanceId)
+
         then: "verify that the 'integration_task_3' was polled and acknowledged"
         verifyPolledAndAcknowledgedLargePayloadTask(polledAndAckLargePayloadTask)
 
-        and: "task is completed and the next task after join in scheduled"
+        when: "JOIN task is executed"
+        asyncSystemTaskExecutor.execute(joinTask, joinTaskId)
+
+        then: "task is completed and the next task after join in scheduled"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
             status == Workflow.WorkflowStatus.RUNNING
             tasks.size() == 6
@@ -410,7 +422,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         def correlationId = "workflow_with_inline_sub_wf_external_storage"
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(WORKFLOW_WITH_INLINE_SUB_WF, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(WORKFLOW_WITH_INLINE_SUB_WF, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -564,7 +576,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         String workflowInputPath = uploadInitialWorkflowInput()
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(LINEAR_WORKFLOW_T1_T2, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(LINEAR_WORKFLOW_T1_T2, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -658,7 +670,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         def correlationId = "decision_terminate_external_storage"
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(WORKFLOW_WITH_DECISION_AND_TERMINATE, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(WORKFLOW_WITH_DECISION_AND_TERMINATE, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -709,7 +721,7 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
         String workflowInputPath = uploadInitialWorkflowInput()
 
         when: "the workflow is started"
-        def workflowInstanceId = workflowExecutor.startWorkflow(DYNAMIC_FORK_JOIN_WF, 1, correlationId, null, workflowInputPath, null, null)
+        def workflowInstanceId = startWorkflow(DYNAMIC_FORK_JOIN_WF, 1, correlationId, null, workflowInputPath)
 
         then: "verify that the workflow is in a RUNNING state"
         with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
@@ -748,6 +760,205 @@ class ExternalPayloadStorageSpec extends AbstractSpecification {
             tasks[3].taskType == 'JOIN'
             tasks[3].status == Task.Status.IN_PROGRESS
             tasks[3].referenceTaskName == 'dynamicfanouttask_join'
+        }
+    }
+
+    def "Test update task output multiple times using external payload storage"() {
+        given: "An existing simple workflow definition"
+        metadataService.getWorkflowDef(LINEAR_WORKFLOW_T1_T2, 1)
+
+        when: "the workflow is started"
+        def workflowInstanceId = startWorkflow(LINEAR_WORKFLOW_T1_T2, 1, 'multi_task_update_external_storage', new HashMap<String, Object>(), null)
+
+        then: "verify that the workflow is in a RUNNING state"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 1
+            tasks[0].taskType == 'integration_task_1'
+            tasks[0].status == Task.Status.SCHEDULED
+        }
+
+        when: "poll and update 'integration_task_1' with external payload storage output"
+        String taskOutputPath = uploadLargeTaskOutput()
+        workflowTestUtil.pollAndUpdateTask('integration_task_1', 'task1.integration.worker', taskOutputPath, null, 1)
+
+        then: "verify that 'integration_task1's output is updated correctly"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 1
+            tasks[0].taskType == 'integration_task_1'
+            tasks[0].status == Task.Status.SCHEDULED
+            tasks[0].outputData.isEmpty()
+            tasks[0].externalOutputPayloadStoragePath == taskOutputPath
+        }
+
+        when: "poll and update 'integration_task_1' with no additional output"
+        workflowTestUtil.pollAndUpdateTask('integration_task_1', 'task1.integration.worker', null, null, 1)
+
+        then: "verify that 'integration_task1's output is updated correctly"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 1
+            tasks[0].taskType == 'integration_task_1'
+            tasks[0].status == Task.Status.SCHEDULED
+            tasks[0].outputData.isEmpty()
+            // no duplicate upload
+            tasks[0].externalOutputPayloadStoragePath == taskOutputPath
+        }
+
+        when: "poll and complete 'integration_task_1' with additional output"
+        Map<String, Object> output = ['k1': 'v1', 'k2': 'v2']
+        workflowTestUtil.pollAndCompleteTask('integration_task_1', 'task1.integration.worker', output, 1)
+
+        then: "verify that 'integration_task1 is complete and output is updated correctly"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 2
+            tasks[0].taskType == 'integration_task_1'
+            tasks[0].status == Task.Status.COMPLETED
+            tasks[0].outputData.isEmpty()
+            // upload again with additional output
+            tasks[0].externalOutputPayloadStoragePath != taskOutputPath
+            verifyPayload(output, mockExternalPayloadStorage.downloadPayload(tasks[0].externalOutputPayloadStoragePath))
+
+            tasks[1].taskType == 'integration_task_2'
+            tasks[1].status == Task.Status.SCHEDULED
+        }
+
+        when: "poll and update 'integration_task_2' with output"
+        Map<String, Object> output1 = ['k1': 'v1', 'k2': 'v2']
+        workflowTestUtil.pollAndUpdateTask('integration_task_2', 'task1.integration.worker', null, output1, 1)
+
+        then: "verify that 'integration_task2's output is updated correctly"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 2
+            tasks[1].taskType == 'integration_task_2'
+            tasks[1].status == Task.Status.SCHEDULED
+            tasks[1].externalOutputPayloadStoragePath == null
+            verifyPayload(output1, tasks[1].outputData)
+        }
+
+        when: "poll and complete 'integration_task_2' with additional output"
+        Map<String, Object> output2 = ['k3': 'v3', 'k4': 'v4']
+        workflowTestUtil.pollAndCompleteTask('integration_task_2', 'task1.integration.worker', output2, 1)
+
+        then: "verify that 'integration_task2 is complete and output is updated correctly"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.COMPLETED
+            tasks.size() == 2
+
+            tasks[0].taskType == 'integration_task_1'
+            tasks[0].status == Task.Status.COMPLETED
+            tasks[0].outputData.isEmpty()
+
+            tasks[1].taskType == 'integration_task_2'
+            tasks[1].status == Task.Status.COMPLETED
+            tasks[1].externalOutputPayloadStoragePath == null
+            output1.putAll(output2)
+            verifyPayload(output1, tasks[1].outputData)
+        }
+    }
+
+    def "Test fork join workflow exceed external storage limit should fail the task and workflow"() {
+
+        given: "An existing fork join workflow definition"
+        metadataService.getWorkflowDef(FORK_JOIN_WF, 1)
+
+        and: "input required to start large payload workflow"
+        def correlationId = 'fork_join_external_storage'
+        String workflowInputPath = uploadInitialWorkflowInput()
+
+        when: "the workflow is started"
+        def workflowInstanceId = startWorkflow(FORK_JOIN_WF, 1, correlationId, null, workflowInputPath)
+
+        then: "verify that the workflow is in a RUNNING state"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 4
+            tasks[0].status == Task.Status.COMPLETED
+            tasks[0].taskType == 'FORK'
+            tasks[1].status == Task.Status.SCHEDULED
+            tasks[1].taskType == 'integration_task_1'
+            tasks[2].status == Task.Status.SCHEDULED
+            tasks[2].taskType == 'integration_task_2'
+            tasks[3].status == Task.Status.IN_PROGRESS
+            tasks[3].taskType == 'JOIN'
+        }
+
+        when: "the first task of the left fork is polled and completed"
+        def polledAndAckTask = workflowTestUtil.pollAndCompleteTask('integration_task_1', 'task1.integration.worker')
+        def joinTaskId = workflowExecutionService.getExecutionStatus(workflowInstanceId, true).getTaskByRefName("fanouttask_join").taskId
+
+        then: "verify that the 'integration_task_1' was polled and acknowledged"
+        verifyPolledAndAcknowledgedTask(polledAndAckTask)
+
+        and: "task is completed and the next task in the fork is scheduled"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 5
+            tasks[0].status == Task.Status.COMPLETED
+            tasks[0].taskType == 'FORK'
+            tasks[1].status == Task.Status.COMPLETED
+            tasks[1].taskType == 'integration_task_1'
+            tasks[2].status == Task.Status.SCHEDULED
+            tasks[2].taskType == 'integration_task_2'
+            tasks[3].status == Task.Status.IN_PROGRESS
+            tasks[3].taskType == 'JOIN'
+            tasks[4].status == Task.Status.SCHEDULED
+            tasks[4].taskType == 'integration_task_3'
+        }
+
+        when: "the first task of the right fork is polled and completed with external payload storage"
+        String taskOutputPath = "${UUID.randomUUID()}.json"
+        mockExternalPayloadStorage.upload(taskOutputPath, mockExternalPayloadStorage.createLargePayload(500))
+        def polledAndAckLargePayloadTask = workflowTestUtil.pollAndCompleteLargePayloadTask('integration_task_2', 'task2.integration.worker', taskOutputPath)
+
+        then: "verify that the 'integration_task_2' was polled and acknowledged"
+        verifyPolledAndAcknowledgedLargePayloadTask(polledAndAckLargePayloadTask)
+
+        and: "task is completed and the workflow is in running state"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.RUNNING
+            tasks.size() == 5
+            tasks[0].status == Task.Status.COMPLETED
+            tasks[0].taskType == 'FORK'
+            tasks[1].status == Task.Status.COMPLETED
+            tasks[1].taskType == 'integration_task_1'
+            tasks[2].status == Task.Status.COMPLETED
+            tasks[2].taskType == 'integration_task_2'
+            tasks[3].status == Task.Status.IN_PROGRESS
+            tasks[3].taskType == 'JOIN'
+            tasks[4].status == Task.Status.SCHEDULED
+            tasks[4].taskType == 'integration_task_3'
+        }
+
+        when: "the second task of the left fork is polled and completed with external payload storage"
+        taskOutputPath = "${UUID.randomUUID()}.json"
+        mockExternalPayloadStorage.upload(taskOutputPath, mockExternalPayloadStorage.createLargePayload(500))
+        polledAndAckLargePayloadTask = workflowTestUtil.pollAndCompleteLargePayloadTask('integration_task_3', 'task3.integration.worker', taskOutputPath)
+
+        then: "verify that the 'integration_task_3' was polled and acknowledged"
+        verifyPolledAndAcknowledgedLargePayloadTask(polledAndAckLargePayloadTask)
+
+        when: "JOIN task is executed"
+        asyncSystemTaskExecutor.execute(joinTask, joinTaskId)
+
+        then: "task is completed and the join task is failed because of exceeding size limit"
+        with(workflowExecutionService.getExecutionStatus(workflowInstanceId, true)) {
+            status == Workflow.WorkflowStatus.FAILED
+            tasks.size() == 5
+            tasks[0].status == Task.Status.COMPLETED
+            tasks[0].taskType == 'FORK'
+            tasks[1].status == Task.Status.COMPLETED
+            tasks[1].taskType == 'integration_task_1'
+            tasks[2].status == Task.Status.COMPLETED
+            tasks[2].taskType == 'integration_task_2'
+            tasks[2].outputData.isEmpty()
+            tasks[3].status == Task.Status.FAILED_WITH_TERMINAL_ERROR
+            tasks[3].taskType == 'JOIN'
+            tasks[3].outputData.isEmpty()
+            !tasks[3].getExternalOutputPayloadStoragePath()
         }
     }
 

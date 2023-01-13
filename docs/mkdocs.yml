@@ -1,5 +1,5 @@
 site_name: Conductor Documentation
-
+site_description: Conductor is a platform created by Netflix to orchestrate workflows that span across microservices.
 repo_url: https://github.com/Netflix/conductor
 edit_uri: ''
 strict: true
@@ -10,6 +10,7 @@ nav:
     - Running Conductor:
       - From Source: gettingstarted/source.md
       - Using Docker: gettingstarted/docker.md
+      - Hosted Solutions: gettingstarted/hosted.md
     - Basic Concepts: gettingstarted/basicconcepts.md
     - High Level Steps: gettingstarted/steps.md
     - Using the Client: gettingstarted/client.md
@@ -74,6 +75,7 @@ nav:
     - System Tasks:
       - Event Task: reference-docs/event-task.md
       - HTTP Task: reference-docs/http-task.md
+      - Human Task: reference-docs/human-task.md
       - Inline Task: reference-docs/inline-task.md
       - JSON JQ Transform Task: reference-docs/json-jq-transform-task.md
       - Kafka Publish Task: reference-docs/kafka-publish-task.md
@@ -84,11 +86,15 @@ nav:
       - Extending Conductor: extend.md
       - Annotation Processor: reference-docs/annotation-processor.md
       - Archival of Workflows: reference-docs/archival-of-workflows.md
-      - Azure Blog Storage: reference-docs/azureblob-storage.md
+      - Azure Blob Storage: reference-docs/azureblob-storage.md
       - External Payload Storage: externalpayloadstorage.md
       - Redis: reference-docs/redis.md
-    - Polyglot SDKs:
+    - SDKs:
+      - CSharp SDK: how-tos/csharp-sdk.md
+      - Clojure SDK: how-tos/clojure-sdk.md
+      - Go SDK: how-tos/go-sdk.md
       - Python SDK: how-tos/python-sdk.md
+      
     - Best Practices: bestpractices.md
     - FAQ: faq.md
     - Directed Acyclic Graph: reference-docs/directed-acyclic-graph.md
